@@ -1,0 +1,34 @@
+source:
+  org: "Anthropic"
+  role_title: "Product Manager, Developer Productivity"
+  url: "https://job-boards.greenhouse.io/anthropic/jobs/5220143008"
+  fetched_at: "2026-07-02"
+  substitution_note: >-
+    Original target was Meta Product Manager (metacareers.com). That site is a
+    fully client-rendered SPA: curl (desktop UA, mobile UA), multiple job IDs,
+    and WebFetch all returned empty shells or HTTP 403/error pages with no job
+    body. Substituted this real, currently-live PM posting at Anthropic — same
+    role (Product Manager), comparable domain (large AI/tech product company),
+    per the RETARGETING.md substitution rule.
+hard_requirements:
+  - {text: "7+ years of product management experience, with deep exposure to developer tooling, build systems, CI/CD, or platform infrastructure", kind: yoe, enforced_by: yoe}
+  - {text: "Bachelor's degree or equivalent combination of education/training/experience", kind: education, enforced_by: none}
+must_haves:
+  - {text: "Own the end-to-end developer experience across source control, build/CI infrastructure and acceleration tooling", signal_id: platform_pm}
+  - {text: "Experience taking technical platform products from infancy to scale", signal_id: platform_pm}
+  - {text: "Own the trade-off framework between velocity, reliability, security and cost; communicate to senior leadership", signal_id: multi_persona_tradeoffs}
+  - {text: "Internalize complex technical systems (build systems, monorepos, CI pipelines, accelerator toolchains)", signal_id: technical_depth}
+nice_to_haves:
+  - {text: "Experience defining and operationalizing engineering productivity metrics (DORA, SPACE, or custom frameworks)", signal_id: productivity_metrics}
+  - {text: "Shipped AI-native developer tooling — code assistants, agent-based automation, AI-integrated IDEs", signal_id: ai_native_tooling}
+  - {text: "Familiarity with accelerator toolchain ecosystems (CUDA/GPU, TPU, AWS Neuron/Trainium)", signal_id: technical_depth}
+explicit_exclusions: []
+coaching_notes: >-
+  Non-engineering IC/leadership hybrid role — stale_ic_role is OFF since this
+  is a PM role, not a coding IC role, even though it requires deep technical
+  fluency. Evidence regexes lean on named tools/frameworks (Bazel, DORA, CI/CD)
+  since "product management" itself has weak textual fingerprints; the
+  cross_functional_fluency signal is intentionally soft (evidence_regex: null)
+  since fluency across functions has no clean keyword signature and should be
+  judged by the learned model, not regex. only_consulting is OFF — Anthropic
+  doesn't call out services-firm backgrounds as a concern for this posting.

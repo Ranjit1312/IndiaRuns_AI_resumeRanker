@@ -1,0 +1,12 @@
+# Resume-Fit Tool — v1 (Module 1: JD → YAML+meta harness). Light, HF-Spaces friendly.
+streamlit>=1.40
+google-genai>=1.0        # Gemma 4 / Gemini via Google AI Studio (BYO key)
+pyyaml>=6                # jd_profile.yaml parse/emit + engine profile.load
+jsonschema>=4            # authoritative Draft-7 validation vs jd_profile.schema.json
+python-dotenv>=1.0       # session-scoped BYO key handling
+
+# Optional JD file intake (paste-text works without these; Docling deferred to Phase 2)
+pymupdf>=1.24            # PDF text extraction
+python-docx>=1.1         # DOCX text extraction
+
+# NOTE: no torch / numpy / pandas in v1 — the rules engine + embeddings land in Phase 2 (Module 2).

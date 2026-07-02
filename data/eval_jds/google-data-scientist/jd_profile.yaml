@@ -1,0 +1,91 @@
+schema_version: 1
+role:
+  title: "Business Data Scientist — Platform Journey Analytics and Measurement"
+  company: "Google"
+  domain: "Data science — business analytics / BizOps (product & strategic analytics)"
+  summary: >-
+    Business data scientist embedded in Google's BizOps team, solving
+    leadership-selected business challenges via quantitative analysis,
+    experimentation and executive-facing storytelling. Builds a unified data
+    architecture and closed-loop measurement systems for the support journey,
+    not a model-shipping ML engineering role.
+  ideal_experience:
+    min_years: 3
+    max_years: 6
+    peak_years: 4.0
+    sigma_years: 2.0
+  notice_preference_days: 60
+locations:
+  preferred: [boulder, chicago]
+  acceptable: [denver]
+  relocation_acceptable: false
+  remote_acceptable: false
+signals:
+  - id: quant_analysis
+    label: "quantitative data analysis for product/business recommendations"
+    query: >-
+      quantitative data analysis to make product and business recommendations
+      impact analysis market and user understanding strategic analysis user
+      behavior
+    evidence_regex: 'quantitative analysis|impact analys|user behavio(?:u)?r|market (?:sizing|understanding|analysis)|data[- ]driven recommendation'
+    dense_weight: 0.24
+  - id: experimentation
+    label: "experiment design & execution (A/B testing at product scale)"
+    query: >-
+      develop plan and execute experiments iteratively build and prototype
+      ideas on the product at scale a/b testing
+    evidence_regex: 'a/b[- ]test|ab[- ]test|experiment(?:ation)? design|randomized (?:controlled )?experiment|holdout|causal infer'
+    dense_weight: 0.20
+  - id: sql_python_coding
+    label: "coding & querying (Python, R, SQL) for analytics"
+    query: >-
+      coding python r sql querying databases statistical analysis for
+      analytics
+    evidence_regex: '\bsql\b|\bpython\b|\br\b programming|querying database|statistical analys|\bpandas\b|dbt|bigquery'
+    dense_weight: 0.20
+  - id: exec_storytelling
+    label: "presenting findings & recommendations to executive stakeholders"
+    query: >-
+      deliver effective presentations of findings and recommendations to
+      multiple levels of stakeholders including senior executives
+    evidence_regex: 'presented? to (?:executives?|leadership|stakeholders)|executive (?:summary|presentation|readout)|stakeholder (?:management|alignment)'
+    dense_weight: 0.14
+  - id: cross_functional_collab
+    label: "cross-functional collaboration & end-to-end analysis delivery"
+    query: >-
+      collaborate with cross functional stakeholders to understand business
+      needs and complete end to end analysis data gathering scaled deliverables
+    evidence_regex: 'cross[- ]functional|end[- ]to[- ]end analysis|data (?:gathering|pipeline) .{0,30}(?:deliverable|report)'
+    dense_weight: 0.12
+  - id: data_architecture
+    label: "data structures / metrics architecture advocacy  [nice-to-have]"
+    query: >-
+      comprehensive understanding of data structures and metrics advocating
+      for changes to scale support unified data architecture
+    evidence_regex: null
+    dense_weight: 0.0
+dense_extras:
+  yoe_fit_weight: 0.08
+  domain_ratio_weight: 0.10
+cross_encoder_query: >-
+  A business data scientist who performs quantitative data analysis to drive
+  product and business recommendations, designs and runs experiments at product
+  scale, writes production-grade SQL and Python for analytics, presents
+  findings and strategic recommendations persuasively to senior executives, and
+  collaborates cross-functionally to deliver end-to-end analyses, with 3-6
+  years of experience in an analytics or BizOps-style role.
+domain:
+  in_domain_terms: [data science, analytics, business analytics, bizops,
+                    experimentation, a/b testing, statistics, sql, python,
+                    strategic analysis, operations analytics, metrics]
+  out_of_domain_terms: [computer vision, embedded systems, hardware design,
+                        graphic design, manual qa, physical security,
+                        customer support agent]
+  in_domain_regex: 'data science|analytics|experiment|a/b[- ]test|statistic|\bsql\b|\bpython\b|bizops|strategic analysis|metrics|dashboard'
+  out_of_domain_regex: 'computer vision|embedded systems|hardware design|graphic design|manual (?:qa|testing)|physical security|customer support agent'
+relevant_skill_regex: 'sql|python|\br\b|statistic|analytics|experiment|a/b|ab test|data visuali[sz]ation|tableau|looker|bigquery|dbt|excel|business analysis|causal infer|regression'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: true}

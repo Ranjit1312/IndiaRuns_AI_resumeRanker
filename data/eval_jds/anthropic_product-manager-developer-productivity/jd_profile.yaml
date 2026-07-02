@@ -1,0 +1,93 @@
+schema_version: 1
+role:
+  title: "Product Manager, Developer Productivity"
+  company: "Anthropic"
+  domain: "Product management — developer tooling & internal platform"
+  summary: >-
+    Product manager owning the end-to-end developer experience at an AI
+    research/product company: build systems, CI/CD, developer environments,
+    accelerator toolchain management, and AI-native acceleration tooling for
+    thousands of internal engineers and researchers. 7+ years PM experience,
+    deep exposure to developer tooling and platform infrastructure.
+  ideal_experience:
+    min_years: 7
+    max_years: 15
+    peak_years: 10.0
+    sigma_years: 3.0
+  notice_preference_days: 60
+locations:
+  preferred: [san francisco, new york]
+  acceptable: [remote]
+  relocation_acceptable: true
+  remote_acceptable: false
+signals:
+  - id: platform_pm
+    label: "owning technical platform products from infancy to scale"
+    query: >-
+      product manager owning technical platform product from infancy to scale
+      internal developer platform build systems CI CD infrastructure roadmap
+    evidence_regex: 'platform (?:product|team|pm)|developer (?:platform|tooling|productivity|experience)|internal (?:tool|platform)|\bci\/cd\b|build system'
+    dense_weight: 0.26
+  - id: multi_persona_tradeoffs
+    label: "balancing competing engineering-persona needs & prioritization trade-offs"
+    query: >-
+      balancing needs of multiple engineering personas prioritization trade
+      offs between velocity reliability and security communicating to
+      leadership
+    evidence_regex: 'trade[- ]?off|prioritiz|stakeholder|cross[- ]functional|velocity.{0,30}reliability|roadmap'
+    dense_weight: 0.18
+  - id: technical_depth
+    label: "internalizing complex technical systems (build graphs, monorepos, CI pipelines)"
+    query: >-
+      deep technical understanding of build systems monorepos ci pipelines
+      accelerator toolchains translating into product vision
+    evidence_regex: 'monorepo|build (?:graph|system|pipeline)|\bbazel\b|\bbuck\b|\bci\b pipeline|accelerator|\bgpu\b|\btpu\b'
+    dense_weight: 0.16
+  - id: productivity_metrics
+    label: "defining and operationalizing engineering productivity metrics  [nice-to-have]"
+    query: >-
+      defining engineering productivity metrics dora space framework developer
+      velocity measurement
+    evidence_regex: '\bdora\b|\bspace\b framework|productivity metric|developer velocity|engineering metrics|cycle time'
+    dense_weight: 0.08
+  - id: ai_native_tooling
+    label: "AI-native developer tooling / agent-assisted engineering workflows"
+    query: >-
+      ai native developer tooling code assistants agent based automation ai
+      integrated ides governance trust adoption
+    evidence_regex: 'ai[- ]native|code assistant|copilot|agent(?:ic)?[- ](?:based|driven|assisted)|ai[- ]integrated|autonomous (?:agent|collaborator)'
+    dense_weight: 0.14
+  - id: cross_functional_fluency
+    label: "cross-functional fluency across engineering, leadership and security"
+    query: >-
+      fluent across functions discussing technical detail with engineers
+      velocity economics with leadership governance with security teams
+    evidence_regex: null
+    dense_weight: 0.10
+dense_extras:
+  yoe_fit_weight: 0.10
+  domain_ratio_weight: 0.08
+cross_encoder_query: >-
+  A product manager with 7+ years of experience who has owned a technical
+  developer platform from infancy to scale, defining strategy and roadmap
+  across build systems, CI/CD pipelines, developer environments and
+  accelerator toolchains, balancing trade-offs between velocity, reliability
+  and security across multiple engineering personas, deeply understanding
+  build graphs, monorepos and CI infrastructure, championing engineering
+  productivity metrics, and driving adoption of AI-native developer tooling
+  such as code assistants and agent-based automation.
+domain:
+  in_domain_terms: [product management, developer tooling, platform, build
+                    system, ci/cd, developer productivity, roadmap,
+                    infrastructure, engineering, internal tools]
+  out_of_domain_terms: [graphic design, sales, marketing, data entry,
+                        pure research with no product ownership, customer
+                        support]
+  in_domain_regex: 'product manag|developer (?:tooling|platform|productivity|experience)|build system|\bci\/cd\b|roadmap|platform product|internal tool'
+  out_of_domain_regex: 'graphic design|\bsales\b|marketing|data entry|customer support|pure research'
+relevant_skill_regex: 'product management|roadmap|stakeholder|prioritiz|\bci\/cd\b|build system|developer tooling|platform|agile|\bkpi\b|technical program|\bsql\b|analytics|a\/b test'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: false}

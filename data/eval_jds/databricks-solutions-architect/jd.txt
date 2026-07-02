@@ -1,0 +1,27 @@
+Solutions Architect
+Databricks — Toronto, Canada (open to remote candidates in eastern Canada)
+
+While candidates in the listed locations are encouraged for this role, we are open to remote candidates in other locations in eastern Canada.
+
+As a Solutions Architect at Databricks within the Field Engineering org you will partner with our customers to design scalable data architectures using Databricks technology and services. You have technical depth and business knowledge and can drive complex technology discussions which express the value of the Databricks platform throughout the sales lifecycle. In partnership with our Account Executives, you will engage with our customers' technical leads, including architects, engineers, and operations teams with the goal of establishing yourself as a trusted advisor to achieve tangible outcomes. You will work with teams across Databricks and our executive leadership to represent your customer's needs and build valuable customer engagements and report to the Field Engineering Manager.
+
+The impact you will have:
+- You will work with Sales and other essential partners to develop account strategies for your assigned accounts to grow their usage of the platform.
+- Establish the Databricks Lakehouse architecture as the standard data architecture for customers through excellent technical account planning.
+- You will build and present reference architectures and demo applications for prospects to help them understand how Databricks can be used to achieve their goals to land new users and use cases.
+- Capture the technical win by consulting on big data architectures, data engineering pipelines, and data science/machine learning projects; prove out the Databricks technology for strategic customer projects; and validate integrations with cloud services and other 3rd party applications.
+- Become an expert in, and promote Databricks inspired open-source projects (Spark, Delta Lake, MLflow, and Koalas) across developer communities through meetups, conferences, and webinars.
+
+What we look for:
+- 5+ years in a customer-facing pre-sales, technical architecture, or consulting role with expertise in at least one of the following technologies:
+  - Big data engineering (Ex: Spark, Hadoop, Kafka)
+  - Data Warehousing & ETL (Ex: SQL, OLTP/OLAP/DSS)
+  - Data Science and Machine Learning (Ex: pandas, scikit-learn, HPO)
+  - Data Applications (Ex: Logs Analysis, Threat Detection, Real-time Systems Monitoring, Risk Analysis and more)
+- Experience translating a customer's business needs to technology solutions, including establishing buy-in with essential customer stakeholders at all levels of the business.
+- Experienced at designing, architecting, and presenting data systems for customers and managing the delivery of production solutions of those data architectures.
+- Fluent in SQL and database technology.
+- Debug and development experience in at least one of the following languages: Python, Scala, Java, or R.
+- [Desired] Built solutions with public cloud providers such as AWS, Azure, or GCP
+- [Desired] Degree in a quantitative discipline (Computer Science, Applied Mathematics, Operations Research)
+- Travel to customers in your region up to 30% of the time.

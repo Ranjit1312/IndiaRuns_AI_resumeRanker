@@ -1,0 +1,10 @@
+{
+  "org": "Stripe",
+  "role_title": "Backend Engineer, Payments and Risk",
+  "url": "https://stripe.com/jobs/listing/backend-engineer-payments-and-risk/7232592",
+  "fetched_at": "2026-07-02",
+  "domain_label": "backend software engineering (payments infrastructure / APIs)",
+  "location": "Remote / multiple Stripe hub offices (US base range listed)",
+  "job_id": "7232592",
+  "capture_method": "curl of server-rendered stripe.com job-detail body (verbatim)"
+}

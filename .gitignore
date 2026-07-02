@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Secrets — BYO key is session-only, never committed
+.env
+.env.local
+
+# Local scratch / clone
+_repo1/
+data/sessions/
+
+# OS
+.DS_Store
+Thumbs.db

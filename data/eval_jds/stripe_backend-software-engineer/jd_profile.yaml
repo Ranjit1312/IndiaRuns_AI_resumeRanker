@@ -1,0 +1,91 @@
+schema_version: 1
+role:
+  title: "Backend Engineer, Payments and Risk"
+  company: "Stripe"
+  domain: "Backend software engineering — payments infrastructure & APIs"
+  summary: >-
+    Backend engineer for Stripe's Payments and Risk org building the APIs,
+    services and large-scale systems that reliably handle billions of money
+    movement requests. Generalist across stacks, strong ownership, 2+ years
+    industry experience, language-agnostic hiring bar.
+  ideal_experience:
+    min_years: 2
+    max_years: 8
+    peak_years: 4.0
+    sigma_years: 3.0
+  notice_preference_days: 60
+locations:
+  preferred: [remote, san francisco, seattle, new york]
+  acceptable: [bengaluru, dublin, mexico city]
+  relocation_acceptable: true
+  remote_acceptable: true
+signals:
+  - id: api_services
+    label: "designing/building/maintaining large-scale APIs and services"
+    query: >-
+      designing building and maintaining production APIs and backend services
+      that handle billions of requests reliably at scale
+    evidence_regex: 'design(?:ed|ing)?.{0,30}(?:api|service)|built.{0,20}(?:api|backend service)|large[- ]scale (?:api|system|service)|distributed system|microservice'
+    dense_weight: 0.30
+  - id: production_reliability
+    label: "debugging and resolving critical production issues across the stack"
+    query: >-
+      debugging and resolving critical production incidents across services
+      and multiple layers of the stack, on call, root cause analysis
+    evidence_regex: 'production (?:issue|incident|outage)|on[- ]call|root cause|debug(?:ged|ging)?|postmortem|incident response'
+    dense_weight: 0.22
+  - id: financial_systems
+    label: "large-scale financial / payments / money-movement systems  [nice-to-have]"
+    query: >-
+      large scale financial tracking systems payments money movement ledger
+      transactions billing
+    evidence_regex: 'payment|ledger|transaction processing|money movement|billing system|fintech|financial (?:system|infrastructure)'
+    dense_weight: 0.14
+  - id: cloud_infra
+    label: "cloud-based services and infrastructure (gRPC, GraphQL, Docker/Kubernetes, AWS)"
+    query: >-
+      cloud based services grpc graphql docker kubernetes aws infrastructure
+      containers
+    evidence_regex: '\bgrpc\b|\bgraphql\b|docker|kubernetes|\baws\b|\bgcp\b|\bazure\b|container'
+    dense_weight: 0.12
+  - id: mentorship_collab
+    label: "mentoring engineers and cross-functional collaboration"
+    query: >-
+      mentoring engineers helping them grow collaborating with cross
+      functional stakeholders to build new features and improve engineering
+      standards
+    evidence_regex: 'mentor(?:ed|ing|ship)?|cross[- ]functional|collaborat|engineering standards|tooling and process'
+    dense_weight: 0.10
+  - id: coding_strength
+    label: "strong general-purpose coding ability (language-agnostic)"
+    query: >-
+      strong software engineering coding skills across programming languages
+      generalist engineer high ownership autonomy
+    evidence_regex: null
+    dense_weight: 0.08
+dense_extras:
+  yoe_fit_weight: 0.10
+  domain_ratio_weight: 0.08
+cross_encoder_query: >-
+  A backend software engineer with 2+ years of industry experience who has
+  designed, built and maintained production APIs and large-scale services
+  handling billions of requests reliably, debugged and resolved critical
+  production issues across the stack, worked with cloud infrastructure such as
+  gRPC, GraphQL, Docker, Kubernetes or AWS, mentored engineers, and
+  collaborated cross-functionally, ideally with exposure to large-scale
+  financial or payments systems, strong general-purpose coding ability and high
+  ownership.
+domain:
+  in_domain_terms: [backend, api, distributed systems, microservices, payments,
+                    infrastructure, cloud, software engineering, production,
+                    scalability, reliability]
+  out_of_domain_terms: [graphic design, sales, marketing, data entry,
+                        pure front-end only, pure research with no shipping]
+  in_domain_regex: 'backend|\bapi\b|distributed system|microservice|infrastructure|software engineer|production system|scalab'
+  out_of_domain_regex: 'graphic design|\bsales\b|marketing|data entry|pure front[- ]?end|no shipping'
+relevant_skill_regex: 'backend|\bapi\b|distributed system|microservice|\bgrpc\b|\bgraphql\b|docker|kubernetes|\baws\b|\bgcp\b|\bazure\b|python|\bjava\b|golang|\bgo\b|ruby|scala|sql|database|payments|ledger|system design'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: true}
+  stale_ic_role:   {enabled: true}

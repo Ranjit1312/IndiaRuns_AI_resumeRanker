@@ -1,0 +1,29 @@
+Security Engineer, AWS Security — Amazon.com Services LLC
+Location: USA, WA, Seattle | Job ID: 10407198
+
+Description
+We're looking for a Security Engineer to join the team that secures the foundational compute and networking systems powering AWS — the systems behind EC2, Nitro, EBS, VPC, and more.
+
+You'll work directly with service teams across some of the most critical systems in cloud computing to find and fix security risks before they become problems. You will design security controls and provide architectural guidance for systems that operate at massive scale and underpin everything from generative AI workloads to the core cloud platform millions of customers depend on. You'll also work closely with fast-paced engineering teams to pioneer new ways of securing AI-first and AI-native development, shaping how security keeps up as the industry transforms.
+
+Key job responsibilities
+- Design, build, and maintain automated security guardrails and paved paths that enable secure-by-default practices
+- Engage early with development teams at the ideation and design stage to embed security into applications from the start, providing guidance on secure architecture and coding practices
+- Build automated, continuous security assessment capabilities that replace manual security reviews and scale across our business unit
+- Contribute code for security fixes and paved path solutions directly alongside developers, making the secure path the easy path
+- Partner with developers to build scalable, self-service security tools that enable teams to identify and remediate security risks without bottlenecking on security teams
+- Design and implement preventive and detective security controls that provide continuous assurance rather than point-in-time assessments
+- Collaborate with security stakeholders to define and drive the long-term security strategy and participate in periodic on-call rotations to support security incidents
+- Leverage AI tools and techniques to accelerate security assessments, automate threat detection, and drive innovation in how we secure systems at scale
+
+Basic Qualifications
+- 2+ years of web protocols, common security attacks, and remediation (non-internship) experience
+- Bachelor's degree in Engineering, Computer Science, or a related field
+- Knowledge of system security vulnerabilities and remediation techniques, including penetration testing and the development of exploits or equivalent
+- Experience solving basic problems by writing code or scripts with some assistance
+
+Preferred Qualifications
+- Experience with AWS services or other cloud offerings
+- Experience using AI/ML tools and techniques to solve security problems
+
+[Boilerplate DEI / benefits / accommodation sections trimmed — see source URL for full posting.]

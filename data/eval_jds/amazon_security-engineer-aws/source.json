@@ -1,0 +1,11 @@
+{
+  "org": "Amazon (AWS Security)",
+  "role_title": "Security Engineer, AWS Security",
+  "url": "https://www.amazon.jobs/en/jobs/10407198/security-engineer-aws-security",
+  "fetched_at": "2026-07-02",
+  "domain_label": "cloud & application security engineering",
+  "location": "USA, WA, Seattle",
+  "salary_posted": "$136,000 - $184,000 USD/yr",
+  "job_id": "10407198",
+  "capture_method": "curl of server-rendered amazon.jobs job-detail-body (verbatim)"
+}

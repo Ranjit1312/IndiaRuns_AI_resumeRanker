@@ -1,0 +1,29 @@
+Senior Technical Program Manager, Amazon Global Logistics (AGL) — Amazon
+Location: IND, TS, Hyderabad | Job ID: 10415620
+
+Description
+As a Senior Technical Program Manager for Amazon Global Logistics (AGL), you'll lead complex cross-organizational initiatives that revolutionize e-commerce through innovative global logistics solutions. You'll drive programs that help break down barriers for selling partners, enabling them to reach hundreds of millions of customers worldwide through our highly-available, scalable distributed systems.
+
+Key job responsibilities
+- Lead and manage complex technical programs across multiple engineering teams and stakeholders
+- Design and implement sustainable processes for cross-functional program management
+- Drive development of software solutions that optimize global fulfillment and cross-border selling
+- Establish and track key performance indicators (KPIs) and service level agreements (SLAs)
+- Manage program scope, schedule, budget, quality, risk, and critical path elements
+- Coordinate release schedules and ensure successful delivery of technical solutions
+- Partner with engineering teams to build scalable, distributed systems
+- Present progress and metrics to senior leadership
+
+Basic Qualifications
+- 5+ years of technical product or program management experience
+- 7+ years of working directly with engineering teams experience
+- 3+ years of software development experience
+- 5+ years of technical program management working directly with software engineering teams experience
+- Experience managing programs across cross functional teams, building processes and coordinating release schedules
+
+Preferred Qualifications
+- 5+ years of project management disciplines including scope, schedule, budget, quality, along with risk and critical path management experience
+- Experience managing projects across cross functional teams, building sustainable processes and coordinating release schedules
+- Experience defining KPI's/SLA's used to drive multi-million dollar businesses and reporting to senior leadership
+
+[Boilerplate "A day in the life" / "About the team" / benefits / accommodation sections trimmed — see source URL for full posting.]

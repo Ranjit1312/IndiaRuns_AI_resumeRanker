@@ -1,0 +1,87 @@
+schema_version: 1
+role:
+  title: "Security Engineer — AWS Security"
+  company: "Amazon (AWS)"
+  domain: "Cloud & application security engineering"
+  summary: >-
+    Security engineer securing AWS foundational compute and networking (EC2,
+    Nitro, EBS, VPC). Builds automated security guardrails and secure-by-default
+    paved paths, runs continuous/automated security assessment that replaces
+    manual reviews, and contributes code for fixes alongside developers.
+  ideal_experience:
+    min_years: 2
+    max_years: 8
+    peak_years: 4.0
+    sigma_years: 2.5
+  notice_preference_days: 60
+locations:
+  preferred: [seattle]
+  acceptable: [bellevue]
+  relocation_acceptable: true
+  remote_acceptable: false
+signals:
+  - id: appsec_guardrails
+    label: "automated security guardrails / secure-by-default paved paths"
+    query: >-
+      building automated security guardrails paved paths secure by default
+      controls policy as code at scale
+    evidence_regex: 'guardrail|paved[- ]path|secure[- ]by[- ]default|policy[- ]as[- ]code|security automation'
+    dense_weight: 0.24
+  - id: vuln_remediation
+    label: "vulnerability assessment, penetration testing & remediation"
+    query: >-
+      vulnerability assessment penetration testing exploit development threat
+      modeling remediation of security risks
+    evidence_regex: 'penetration test|pentest|vulnerabilit|exploit|threat model|remediat'
+    dense_weight: 0.22
+  - id: cloud_security
+    label: "AWS / cloud security (EC2, VPC, IAM)"
+    query: >-
+      aws cloud security ec2 vpc iam network security securing distributed cloud
+      infrastructure at scale
+    evidence_regex: '\baws\b|\bec2\b|\bvpc\b|\biam\b|cloud security|\bnitro\b'
+    dense_weight: 0.18
+  - id: secure_coding
+    label: "secure coding / contributing code for security fixes"
+    query: >-
+      writing production code and scripts to fix security issues secure coding
+      practices automation in python
+    evidence_regex: 'secure coding|code review|\bpython\b|scripting|automation'
+    dense_weight: 0.14
+  - id: continuous_assessment
+    label: "continuous / automated security assessment"
+    query: >-
+      continuous automated security assessment replacing manual security reviews
+      scaling assessment across teams ci cd security
+    evidence_regex: 'continuous (?:security )?assessment|automated (?:security )?(?:scan|review|assessment)|ci[/ ]?cd security'
+    dense_weight: 0.10
+  - id: ai_for_security
+    label: "AI/ML tools for security  [nice-to-have]"
+    query: >-
+      using ai ml tools and techniques to accelerate security assessments and
+      threat detection
+    evidence_regex: null
+    dense_weight: 0.0
+dense_extras:
+  yoe_fit_weight: 0.08
+  domain_ratio_weight: 0.10
+cross_encoder_query: >-
+  A security engineer who secures cloud infrastructure such as AWS EC2, VPC and
+  IAM, builds automated security guardrails and secure-by-default paved paths,
+  performs vulnerability assessment, penetration testing and threat modeling,
+  contributes production code and scripts to remediate security risks, and
+  designs continuous automated security assessment that replaces manual reviews.
+domain:
+  in_domain_terms: [security, appsec, application security, cloud security,
+                    vulnerability, penetration testing, threat modeling, aws,
+                    devsecops, secure coding, incident response, iam]
+  out_of_domain_terms: [marketing, sales, graphic design, manual qa,
+                        physical security guard, frontend design]
+  in_domain_regex: 'security|appsec|vulnerabilit|penetration|threat model|\baws\b|cloud security|devsecops|\biam\b'
+  out_of_domain_regex: 'marketing|\bsales\b|graphic design|physical security|manual (?:qa|testing)'
+relevant_skill_regex: 'security|appsec|penetration|vulnerabilit|\baws\b|cloud|\bpython\b|threat|\biam\b|network security|devsecops|siem|encryption|cryptography'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: true}

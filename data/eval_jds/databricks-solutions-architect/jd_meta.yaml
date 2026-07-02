@@ -1,0 +1,27 @@
+source:
+  org: "Databricks"
+  role_title: "Solutions Architect"
+  url: "https://www.databricks.com/company/careers/field-engineering/solutions-architect-5898477002"
+  fetched_at: "2026-07-02"
+hard_requirements:
+  - {text: "5+ years in a customer-facing pre-sales, technical architecture, or consulting role", kind: yoe, enforced_by: yoe}
+  - {text: "Travel to customers in your region up to 30% of the time", kind: skill, enforced_by: none}
+  - {text: "Fluent in SQL and database technology", kind: skill, enforced_by: domain}
+must_haves:
+  - {text: "Expertise in at least one of: big data engineering, data warehousing/ETL, data science/ML, or data applications", signal_id: big_data_platform}
+  - {text: "Experience translating customer business needs to technology solutions, establishing buy-in with stakeholders", signal_id: presales_consulting}
+  - {text: "Experienced designing, architecting, and presenting data systems; managing delivery of production solutions", signal_id: architecture_design_delivery}
+  - {text: "Fluent in SQL and database technology", signal_id: big_data_platform}
+  - {text: "Debug and development experience in Python, Scala, Java, or R", signal_id: coding_languages}
+nice_to_haves:
+  - {text: "Built solutions with public cloud providers such as AWS, Azure, or GCP", signal_id: cloud_platform}
+  - {text: "Degree in a quantitative discipline (Computer Science, Applied Mathematics, Operations Research)", signal_id: null}
+explicit_exclusions: []
+coaching_notes: >-
+  This is a pre-sales / consulting-adjacent role by design, so unlike most
+  engineering JDs the "only_consulting" and "stale_ic_role" red flags should
+  stay OFF — a career spent in pre-sales, solutions consulting or technical
+  account management is exactly the target profile, not a disqualifier.
+  Candidates should name specific big-data/ML tools (Spark, Delta Lake,
+  MLflow) and quantify customer-facing outcomes (technical wins, POCs closed)
+  rather than just listing "consulting" generically.

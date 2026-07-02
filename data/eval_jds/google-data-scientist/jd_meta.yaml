@@ -1,0 +1,29 @@
+source:
+  org: "Google"
+  role_title: "Business Data Scientist, Platform Journey Analytics and Measurement"
+  url: "https://www.google.com/about/careers/applications/jobs/results/110914006452970182-business-data-scientist-platform-journey-analytics-and-measurement"
+  fetched_at: "2026-07-02"
+hard_requirements:
+  - {text: "Master's degree in a quantitative discipline (Statistics, Engineering, Sciences) or equivalent practical experience", kind: education, enforced_by: none}
+  - {text: "3 years of experience using analytics to solve product or business problems, coding (Python, R, SQL), querying databases or statistical analysis, or a relevant PhD", kind: yoe, enforced_by: yoe}
+must_haves:
+  - {text: "Conduct quantitative data analysis for product/business recommendations (impact analysis, market/user understanding)", signal_id: quant_analysis}
+  - {text: "Develop, plan and execute experiments; prototype ideas on the product at scale", signal_id: experimentation}
+  - {text: "Coding in Python, R, SQL; querying databases or statistical analysis", signal_id: sql_python_coding}
+  - {text: "Deliver effective presentations of findings/recommendations to multiple levels of stakeholders", signal_id: exec_storytelling}
+  - {text: "Collaborate with cross-functional stakeholders on end-to-end analysis", signal_id: cross_functional_collab}
+nice_to_haves:
+  - {text: "4 years of analytics experience (preferred band above the 3-year minimum)", signal_id: null}
+  - {text: "Experience in strategic analysis or operations management support, presenting to executives", signal_id: exec_storytelling}
+  - {text: "Experience in website analysis", signal_id: quant_analysis}
+  - {text: "Experience in AI platform", signal_id: null}
+  - {text: "Comprehensive understanding of Google data structures/metrics, advocating for architecture changes", signal_id: data_architecture}
+explicit_exclusions: []
+coaching_notes: >-
+  This is a BizOps-flavored data science role, not an ML engineering role: lead
+  with quantitative business analysis, experiment design, and executive
+  storytelling rather than model architecture or MLOps. Name SQL/Python/R and
+  the specific analytics stack (BigQuery, dashboards) explicitly, since the JD's
+  hard requirement is analytics coding, not software engineering. The Master's
+  degree is stated as a minimum qualification but Google's standard "or
+  equivalent practical experience" clause makes it advisory, not a hard gate.

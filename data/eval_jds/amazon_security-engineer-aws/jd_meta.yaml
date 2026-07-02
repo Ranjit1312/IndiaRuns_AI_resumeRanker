@@ -1,0 +1,23 @@
+source:
+  org: "Amazon (AWS Security)"
+  role_title: "Security Engineer, AWS Security"
+  url: "https://www.amazon.jobs/en/jobs/10407198/security-engineer-aws-security"
+  fetched_at: "2026-07-02"
+hard_requirements:
+  - {text: "2+ years non-internship experience with web protocols, common security attacks and remediation", kind: yoe, enforced_by: yoe}
+  - {text: "Bachelor's degree in Engineering, CS or related field", kind: education, enforced_by: none}
+  - {text: "Can solve problems by writing code or scripts", kind: skill, enforced_by: domain}
+must_haves:
+  - {text: "Knowledge of security vulnerabilities & remediation incl. penetration testing / exploit development", signal_id: vuln_remediation}
+  - {text: "Design/build automated security guardrails and secure-by-default paved paths", signal_id: appsec_guardrails}
+  - {text: "Build continuous, automated security assessment replacing manual reviews", signal_id: continuous_assessment}
+nice_to_haves:
+  - {text: "Experience with AWS or other cloud offerings", signal_id: cloud_security}
+  - {text: "Using AI/ML tools & techniques to solve security problems", signal_id: ai_for_security}
+explicit_exclusions:
+  - {text: "Non-technical / purely physical-security backgrounds are not a fit", enforced_by: domain, note: "captured in domain.out_of_domain_terms"}
+coaching_notes: >-
+  Make cloud (AWS) and hands-on remediation explicit in your career text — name
+  tools (EC2/VPC/IAM), pentest/exploit work, and any automation or guardrail
+  code you shipped. The degree is stated but Amazon explicitly encourages
+  non-traditional paths, so it is advisory (enforced_by: none), not a hard gate.

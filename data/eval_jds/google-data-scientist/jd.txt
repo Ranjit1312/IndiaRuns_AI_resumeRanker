@@ -1,0 +1,30 @@
+Business Data Scientist, Platform Journey Analytics and Measurement
+Google — Boulder, CO, USA; Chicago, IL, USA
+
+About the role:
+Google's leadership team hand-picks thorny business challenges, and members of BizOps work in small teams to find solutions. As part of this team you fully immerse yourself in data collection, draw insight from analysis, and then zoom out to develop compelling, synthesized recommendations. Taking strategy one step further, you also persuasively communicate your recommendations to senior-level executives, roll-up your sleeves to help drive implementation and check back-in to see the impact of your recommendations.
+
+Our team helps the business make informed decisions by performing rigorous analysis, generating objective insights, and aligning stakeholders to facts. We provide a variety of services, from basic performance insights to strategic initiative support and critical business infrastructure. Our goal is to power the business to run itself. We are evolving from a team that reports on the past into the architects of a proactive, self-optimizing support ecosystem. We are building an engine that proactively diagnoses friction, anticipates changes in advertiser needs, and enables orchestrated improvements across the support journey.
+
+Our strategy focuses on three core pillars: Creating a trusted, unified data architecture and a clear framework for measuring success. Shifting from reactive analysis to strategic consulting, proactively identifying and prioritizing critical business opportunities. Designing closed-loop systems that diagnose issues, trigger automated solution workflows, and validate their impact. This transformation ensures problems are solved before they escalate. For our customers, this means a seamless experience. For the business, it drives unprecedented operational velocity. And for our team, it means evolving into the architects of an autonomous future.
+
+Responsibilities:
+- Conduct quantitative data analysis to make product and business recommendations, including impact analysis, market and user understanding, strategic analysis, and user behavior.
+- Deliver effective presentations of findings and recommendations to multiple levels of stakeholders.
+- Develop, plan, and execute experiments, iteratively build and prototype ideas on the product at scale.
+- Collaborate with cross-functional stakeholders to understand their business needs and complete end-to-end analysis that includes data gathering, analysis, ongoing scaled deliverables, and presentations.
+- Develop a comprehensive understanding of Google data structures and metrics, advocating for changes where needed for scaled support.
+
+Minimum qualifications:
+- Master's degree in a quantitative discipline such as Statistics, Engineering, Sciences, or equivalent practical experience.
+- 3 years of experience using analytics to solve product or business problems, coding (e.g., Python, R, SQL), querying databases or statistical analysis, or a relevant PhD degree.
+
+Preferred qualifications:
+- 4 years of experience using analytics to solve product or business problems, coding (e.g., Python, R, SQL), querying databases or statistical analysis, or a relevant PhD degree.
+- Experience in strategic analysis or operations management support, with experience presenting to executives.
+- Experience in website analysis.
+- Experience in AI platform.
+
+Compensation:
+Individual pay is determined by factors including job-related skills, experience, and relevant education or training.
+US: $138,000 - $198,000 (USD) + 15% bonus target + equity + benefits.

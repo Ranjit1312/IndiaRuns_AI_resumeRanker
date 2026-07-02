@@ -1,0 +1,82 @@
+schema_version: 1
+role:
+  title: "Senior Technical Program Manager — Amazon Global Logistics"
+  company: "Amazon (Global Logistics)"
+  domain: "Technical program management — logistics & distributed systems"
+  summary: >-
+    Senior TPM leading complex cross-organizational technical programs for Amazon
+    Global Logistics: drive software solutions for global fulfillment and
+    cross-border selling, own scope/schedule/budget/risk and critical path,
+    define KPIs/SLAs, and partner with engineering on scalable distributed
+    systems.
+  ideal_experience:
+    min_years: 5
+    max_years: 14
+    peak_years: 8.0
+    sigma_years: 3.0
+  notice_preference_days: 60
+locations:
+  preferred: [hyderabad]
+  acceptable: [bengaluru, bangalore]
+  relocation_acceptable: true
+  remote_acceptable: false
+signals:
+  - id: program_mgmt
+    label: "managing complex cross-team technical programs"
+    query: >-
+      leading and managing complex technical programs across multiple
+      engineering teams coordinating release schedules cross functional delivery
+    evidence_regex: 'program manage|technical program|\btpm\b|cross[- ]functional|release schedule|program management'
+    dense_weight: 0.28
+  - id: delivery_governance
+    label: "KPIs/SLAs, risk & critical-path governance, leadership reporting"
+    query: >-
+      defining kpis slas managing scope schedule budget quality risk critical
+      path reporting progress to senior leadership
+    evidence_regex: '\bkpi\b|\bsla\b|critical path|risk (?:management|mitigation)|scope.{0,20}schedule|senior leadership'
+    dense_weight: 0.20
+  - id: eng_partnership
+    label: "partnering with engineering on scalable distributed systems"
+    query: >-
+      partnering directly with software engineering teams to build scalable
+      distributed highly available systems at scale
+    evidence_regex: 'engineering team|distributed system|scalab|highly[- ]available|software (?:engineering|development)'
+    dense_weight: 0.18
+  - id: software_background
+    label: "hands-on software development background"
+    query: >-
+      software development experience writing code building software before
+      moving into program management
+    evidence_regex: 'software (?:development|engineer)|wrote code|programming|\bsdlc\b'
+    dense_weight: 0.12
+  - id: logistics_domain
+    label: "logistics / supply-chain / fulfillment domain  [nice-to-have]"
+    query: >-
+      global logistics supply chain fulfillment cross border e commerce
+      operations
+    evidence_regex: 'logistics|supply chain|fulfillment|cross[- ]border|e[- ]?commerce'
+    dense_weight: 0.08
+dense_extras:
+  yoe_fit_weight: 0.10
+  domain_ratio_weight: 0.06
+cross_encoder_query: >-
+  A senior technical program manager who has led complex cross-organizational
+  technical programs across multiple engineering teams, defined KPIs and SLAs,
+  managed scope, schedule, budget, risk and critical path, reported to senior
+  leadership, has a hands-on software development background, and partnered with
+  engineering to deliver scalable distributed systems, ideally in logistics or
+  fulfillment.
+domain:
+  in_domain_terms: [program management, project management, technical program,
+                    engineering, distributed systems, kpi, sla, stakeholder,
+                    logistics, supply chain, roadmap, agile]
+  out_of_domain_terms: [marketing, sales, graphic design, data entry,
+                        pure research, individual contributor only]
+  in_domain_regex: 'program management|project management|technical program|\btpm\b|\bkpi\b|\bsla\b|stakeholder|distributed system'
+  out_of_domain_regex: 'marketing|\bsales\b|graphic design|data entry|pure research'
+relevant_skill_regex: 'program management|project management|\bpmp\b|agile|scrum|jira|stakeholder|\bkpi\b|roadmap|risk management|\bsql\b|\bpython\b'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: false}

@@ -1,0 +1,11 @@
+{
+  "org": "Anthropic",
+  "role_title": "Product Manager, Developer Productivity",
+  "url": "https://job-boards.greenhouse.io/anthropic/jobs/5220143008",
+  "fetched_at": "2026-07-02",
+  "domain_label": "product management (developer tooling / internal platform)",
+  "location": "San Francisco, CA | New York City, NY",
+  "job_id": "5220143008",
+  "capture_method": "curl of server-rendered Greenhouse job-board job__description (verbatim)",
+  "substitution_note": "Target was Meta Product Manager (metacareers.com), which is a fully client-rendered SPA that returned empty shells / 403s across multiple curl (desktop + mobile UA), WebFetch, and alternate-job-id attempts. Substituted a real, currently-live Product Manager posting at a comparable large AI/tech product company (Anthropic) per the RETARGETING contract's substitution rule, keeping the PM / non-engineering-adjacent domain variety."
+}

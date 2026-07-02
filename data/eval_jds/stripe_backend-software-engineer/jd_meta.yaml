@@ -1,0 +1,24 @@
+source:
+  org: "Stripe"
+  role_title: "Backend Engineer, Payments and Risk"
+  url: "https://stripe.com/jobs/listing/backend-engineer-payments-and-risk/7232592"
+  fetched_at: "2026-07-02"
+hard_requirements:
+  - {text: "2+ years of industry software engineering experience (excludes internships/co-ops)", kind: yoe, enforced_by: yoe}
+  - {text: "Strong coding skills in any programming language (language-agnostic interview)", kind: skill, enforced_by: none}
+must_haves:
+  - {text: "Design, build, and maintain APIs, services, and large-scale systems handling billions of money movement requests", signal_id: api_services}
+  - {text: "Debug and solve critical production issues across services and multiple levels of the stack", signal_id: production_reliability}
+  - {text: "Collaborate with stakeholders across the company; improve engineering standards, tooling, and processes", signal_id: mentorship_collab}
+  - {text: "Mentor engineers to help them grow", signal_id: mentorship_collab}
+nice_to_haves:
+  - {text: "Experience with large-scale financial tracking systems", signal_id: financial_systems}
+  - {text: "Good understanding and practical knowledge of cloud-based services (gRPC, GraphQL, Docker/Kubernetes, AWS)", signal_id: cloud_infra}
+explicit_exclusions: []
+coaching_notes: >-
+  This is a generalist backend IC role with a deliberately low YoE floor (2+
+  years) and a language-agnostic bar — do not over-weight any single stack.
+  Payments/fintech exposure (financial_systems) is explicitly a nice-to-have,
+  not a hard gate, per "who you are" framing. stale_ic_role stays ON since this
+  is a hands-on coding role; only_consulting stays ON as Stripe wants product
+  company backend depth, not pure services-firm delivery.

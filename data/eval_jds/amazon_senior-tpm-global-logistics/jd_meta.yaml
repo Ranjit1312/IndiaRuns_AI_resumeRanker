@@ -1,0 +1,23 @@
+source:
+  org: "Amazon (Global Logistics)"
+  role_title: "Senior Technical Program Manager, Amazon Global Logistics"
+  url: "https://www.amazon.jobs/en/jobs/10415620/senior-technical-program-manager-amazon-global-logistics"
+  fetched_at: "2026-07-02"
+hard_requirements:
+  - {text: "5+ years technical product or program management experience", kind: yoe, enforced_by: yoe}
+  - {text: "7+ years working directly with engineering teams", kind: yoe, enforced_by: yoe}
+  - {text: "3+ years software development experience", kind: yoe, enforced_by: domain}
+must_haves:
+  - {text: "Manage programs across cross-functional teams, build processes, coordinate release schedules", signal_id: program_mgmt}
+  - {text: "Manage scope, schedule, budget, quality, risk and critical path", signal_id: delivery_governance}
+  - {text: "Partner with engineering to build scalable distributed systems", signal_id: eng_partnership}
+nice_to_haves:
+  - {text: "Define KPIs/SLAs driving multi-million-dollar businesses; report to senior leadership", signal_id: delivery_governance}
+  - {text: "Logistics / fulfillment / cross-border domain exposure", signal_id: logistics_domain}
+explicit_exclusions:
+  - {text: "Pure individual-contributor / non-program-leadership profiles are weaker fits", enforced_by: domain, note: "TPM needs program leadership, not just IC coding"}
+coaching_notes: >-
+  This is program leadership, not an IC coding role — the stale_ic_role gate is
+  intentionally OFF. Surface concrete programs you drove across teams, the
+  KPIs/SLAs you owned, and quantified delivery; keep a visible software
+  background but frame it as enabling technical judgement, not day-to-day coding.

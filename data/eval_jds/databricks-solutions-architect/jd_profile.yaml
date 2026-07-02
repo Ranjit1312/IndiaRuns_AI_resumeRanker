@@ -1,0 +1,88 @@
+schema_version: 1
+role:
+  title: "Solutions Architect"
+  company: "Databricks"
+  domain: "Field engineering — pre-sales solutions architecture (data/AI platform)"
+  summary: >-
+    Customer-facing, pre-sales Solutions Architect within Databricks Field
+    Engineering who partners with Account Executives to design scalable
+    Lakehouse data architectures, drive technical wins across big data, data
+    warehousing and ML use cases, and act as a trusted technical advisor
+    through the sales lifecycle.
+  ideal_experience:
+    min_years: 5
+    max_years: 12
+    peak_years: 7.0
+    sigma_years: 3.0
+  notice_preference_days: 60
+locations:
+  preferred: [toronto]
+  acceptable: [ottawa, montreal, waterloo]
+  relocation_acceptable: false
+  remote_acceptable: true
+signals:
+  - id: presales_consulting
+    label: "customer-facing pre-sales / technical architecture / consulting"
+    query: >-
+      customer facing pre sales technical architecture or consulting role
+      trusted advisor throughout the sales lifecycle
+    evidence_regex: 'pre[- ]?sales|solutions? architect|technical (?:account|consult)|trusted advisor|sales engineer|customer[- ]facing'
+    dense_weight: 0.24
+  - id: big_data_platform
+    label: "big data engineering / data warehousing / ETL (Spark, Hadoop, Kafka, SQL)"
+    query: >-
+      big data engineering spark hadoop kafka data warehousing etl sql
+      oltp olap dss
+    evidence_regex: '\bspark\b|\bhadoop\b|\bkafka\b|data warehous|\betl\b|\bsql\b|\bolap\b|\boltp\b|delta lake|databricks'
+    dense_weight: 0.22
+  - id: data_science_ml
+    label: "data science & machine learning tooling (pandas, scikit-learn, HPO)"
+    query: >-
+      data science and machine learning pandas scikit learn hyperparameter
+      optimization mlflow
+    evidence_regex: 'pandas|scikit[- ]learn|\bhpo\b|hyperparameter|\bmlflow\b|machine learning pipeline'
+    dense_weight: 0.16
+  - id: architecture_design_delivery
+    label: "designing, architecting & presenting data systems; delivering production solutions"
+    query: >-
+      designing architecting and presenting data systems for customers
+      managing delivery of production data architecture solutions
+    evidence_regex: 'reference architecture|architect(?:ed|ing)? (?:a )?(?:data|cloud) (?:system|platform|solution)|solution design|production (?:deployment|rollout)'
+    dense_weight: 0.16
+  - id: coding_languages
+    label: "debug/development experience (Python, Scala, Java, or R)"
+    query: >-
+      debug and development experience python scala java or r
+    evidence_regex: '\bpython\b|\bscala\b|\bjava\b|\br\b programming'
+    dense_weight: 0.12
+  - id: cloud_platform
+    label: "public cloud platform experience (AWS, Azure, GCP)  [nice-to-have]"
+    query: >-
+      built solutions with public cloud providers aws azure or gcp
+    evidence_regex: '\baws\b|\bazure\b|\bgcp\b|google cloud platform'
+    dense_weight: 0.0
+dense_extras:
+  yoe_fit_weight: 0.06
+  domain_ratio_weight: 0.08
+cross_encoder_query: >-
+  A pre-sales Solutions Architect who partners with enterprise customers to
+  design scalable Lakehouse data architectures on Databricks, drives technical
+  wins across big data engineering (Spark, Kafka), data warehousing and ETL,
+  and data science / machine learning use cases, presents reference
+  architectures to technical stakeholders and executives, codes in Python,
+  Scala, Java or R, and has 5+ years in a customer-facing pre-sales or
+  technical architecture role.
+domain:
+  in_domain_terms: [solutions architect, pre-sales, data architecture, spark,
+                    lakehouse, data engineering, data warehousing, etl,
+                    machine learning, cloud, sql, databricks]
+  out_of_domain_terms: [manual qa, graphic design, physical security,
+                        call center support, retail sales floor, cold calling]
+  in_domain_regex: 'solutions? architect|pre[- ]?sales|data architecture|\bspark\b|lakehouse|data engineering|data warehous|\betl\b|machine learning|\bsql\b|databricks'
+  out_of_domain_regex: 'manual (?:qa|testing)|graphic design|physical security|call center|retail sales floor|cold calling'
+relevant_skill_regex: 'spark|hadoop|kafka|\bsql\b|etl|data warehous|databricks|delta lake|mlflow|pandas|scikit|python|scala|\bjava\b|\br\b|machine learning|pre[- ]?sales|solutions? architect|cloud|aws|azure|gcp'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: false}
