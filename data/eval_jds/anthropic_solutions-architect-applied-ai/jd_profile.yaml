@@ -1,0 +1,82 @@
+schema_version: 1
+role:
+  title: "Solutions Architect, Applied AI"
+  company: "Anthropic"
+  domain: "Pre-sales LLM solutions architecture (enterprise)"
+  summary: >-
+    Pre-sales Applied AI architect and trusted technical advisor helping large
+    enterprises across India/APAC adopt Claude: translates requirements into LLM
+    solutions, guides technical architecture and integration, helps customers
+    build evaluation frameworks, and delivers technical content from engineering
+    deep-dives to executive business-value conversations.
+  ideal_experience:
+    min_years: 10
+    max_years: 20
+    peak_years: 13.0
+    sigma_years: 3.0
+  notice_preference_days: 60
+locations:
+  preferred: [mumbai, bangalore, bengaluru]
+  acceptable: []
+  relocation_acceptable: true
+  remote_acceptable: false
+signals:
+  - id: presales_advisory
+    label: "pre-sales technical advisor (SA / SE / TAM)"
+    query: >-
+      pre-sales solutions architect sales engineer technical account manager
+      trusted technical advisor guiding enterprise customers from discovery to
+      deployment
+    evidence_regex: 'pre[- ]?sales|solutions architect|sales engineer|technical account manager|\btam\b|trusted (?:technical )?advisor|customer[- ]facing'
+    dense_weight: 0.24
+  - id: llm_solutions
+    label: "LLM / generative-AI solutions & integration"
+    query: >-
+      designing llm solutions integrating claude generative ai into enterprise
+      technology stacks ai apis prompt engineering
+    evidence_regex: '\bllm\b|large language model|claude|generative ai|\bgenai\b|prompt|ai api'
+    dense_weight: 0.20
+  - id: enterprise_apac
+    label: "enterprise customers in India / APAC, complex buying cycles"
+    query: >-
+      working with enterprise customers in india or apac navigating complex
+      multi-stakeholder buying cycles c-suite executives
+    evidence_regex: 'enterprise (?:customer|client)|\bapac\b|india|buying cycle|c[- ]suite|executive'
+    dense_weight: 0.16
+  - id: cloud_architecture
+    label: "scalable cloud architecture & enterprise integration"
+    query: "designing scalable cloud architectures integrating with enterprise systems"
+    evidence_regex: 'cloud architect|scalable architecture|enterprise (?:system|integration)|\baws\b|azure|\bgcp\b'
+    dense_weight: 0.14
+  - id: evals_ml
+    label: "evaluation frameworks & ML/DS background"
+    query: "helping customers develop evaluation frameworks to measure model performance machine learning data science"
+    evidence_regex: 'eval(?:uation)? framework|\bevals?\b|machine learning|data science'
+    dense_weight: 0.12
+  - id: python_technical
+    label: "technical fluency (Python)  [supporting]"
+    query: "comfortable with python and common llm frameworks and tools"
+    evidence_regex: '\bpython\b|langchain|llm framework'
+    dense_weight: 0.08
+dense_extras:
+  yoe_fit_weight: 0.10
+  domain_ratio_weight: 0.08
+cross_encoder_query: >-
+  A senior pre-sales Solutions Architect / Applied AI advisor who guides enterprise
+  customers in India and APAC to adopt Claude and LLMs, translates requirements
+  into scalable cloud architectures, helps build evaluation frameworks, is
+  comfortable in Python with LLM frameworks, and communicates from engineering
+  deep-dives to C-suite executives.
+domain:
+  in_domain_terms: [solutions architect, pre-sales, llm, generative ai, machine learning,
+                    cloud, enterprise, customer-facing, evaluation]
+  out_of_domain_terms: [backend individual contributor without customer contact, marketing,
+                        non-technical sales, pure research]
+  in_domain_regex: 'solutions architect|pre[- ]?sales|\bllm\b|generative ai|machine learning|cloud|enterprise|customer[- ]facing'
+  out_of_domain_regex: 'marketing|non[- ]technical sales|pure research|back[- ]?end only'
+relevant_skill_regex: '\bllm\b|claude|generative ai|\bpython\b|machine learning|data science|cloud|\baws\b|azure|\bgcp\b|eval|langchain|solutions architect'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: false}

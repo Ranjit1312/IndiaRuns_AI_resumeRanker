@@ -1,0 +1,26 @@
+source:
+  org: "Anthropic"
+  role_title: "Solutions Architect, Applied AI"
+  url: "https://job-boards.greenhouse.io/anthropic/jobs/5117581008"
+  fetched_at: "2026-07-02"
+  note: "Current equivalent of the requested (now-closed) 'Forward Deployed Engineer, Applied AI' link; Anthropic restructured that family into Applied AI Architect / Solutions Architect, Applied AI."
+hard_requirements:
+  - {text: "10+ years in technical customer-facing roles (SA / Sales Engineer / TAM)", kind: yoe, enforced_by: yoe}
+  - {text: "Enterprise experience in India or APAC with complex buying cycles", kind: skill, enforced_by: domain}
+  - {text: "Bachelor's degree or equivalent experience", kind: education, enforced_by: none}
+  - {text: "India-based, hybrid (>=25% in office)", kind: location, enforced_by: location}
+must_haves:
+  - {text: "Pre-sales technical advisory", signal_id: presales_advisory}
+  - {text: "LLM / Claude solution design & integration", signal_id: llm_solutions}
+  - {text: "Enterprise India/APAC, C-suite communication", signal_id: enterprise_apac}
+  - {text: "Scalable cloud architecture", signal_id: cloud_architecture}
+nice_to_haves:
+  - {text: "Evaluation frameworks / ML-DS background", signal_id: evals_ml}
+  - {text: "Comfortable in Python with LLM frameworks", signal_id: python_technical}
+explicit_exclusions:
+  - {text: "Pure backend IC without customer contact, or non-technical sales, are weaker fits", enforced_by: domain, note: "role is a customer-facing technical advisor"}
+coaching_notes: >-
+  Seniority is real here (10+ yrs) — stale_ic_role is OFF, so recent hands-on
+  coding is not required; lead with enterprise pre-sales impact, LLM/GenAI
+  solutioning, and executive communication. Python + LLM-framework familiarity is
+  a plus, not a gate. Visa sponsorship is available.

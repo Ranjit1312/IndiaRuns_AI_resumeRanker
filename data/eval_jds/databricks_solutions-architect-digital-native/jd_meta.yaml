@@ -1,0 +1,23 @@
+source:
+  org: "Databricks"
+  role_title: "Solutions Architect, Digital Native Business"
+  url: "https://www.databricks.com/company/careers/field-engineering/solutions-architect---digital-native-business-6117719002"
+  fetched_at: "2026-07-02"
+hard_requirements:
+  - {text: "5+ years in data engineering, data science, technical architecture or pre-sales/consulting", kind: yoe, enforced_by: yoe}
+  - {text: "Comfortable programming in and debugging Python and SQL", kind: skill, enforced_by: domain}
+  - {text: "Available to travel to customers in region", kind: location, enforced_by: none}
+must_haves:
+  - {text: "Pre-sales technical leadership & PoCs", signal_id: presales_architecture}
+  - {text: "Distributed big-data systems (Spark)", signal_id: big_data_platform}
+  - {text: "Public cloud (AWS/Azure/GCP)", signal_id: cloud_platforms}
+  - {text: "Python & SQL", signal_id: programming_python_sql}
+nice_to_haves:
+  - {text: "Data science / ML tooling", signal_id: data_science_ml}
+  - {text: "Databricks certification; OSS community (Spark/Delta/MLflow)", signal_id: oss_advocacy}
+explicit_exclusions:
+  - {text: "Purely non-technical account-management / quota-only sales backgrounds are weaker fits", enforced_by: domain, note: "role is field-engineering pre-sales, not pure sales"}
+coaching_notes: >-
+  Lead with customer-facing PoCs you architected on Spark/Databricks and a named
+  cloud; show Python+SQL depth. only_consulting is intentionally OFF — pre-sales/
+  consulting experience is exactly what this role wants. Non-linear paths welcome.

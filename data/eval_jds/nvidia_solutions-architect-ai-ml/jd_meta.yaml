@@ -1,0 +1,24 @@
+source:
+  org: "NVIDIA"
+  role_title: "Solutions Architect, AI and ML"
+  url: "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Solutions-Architect--AI-and-ML_JR2000691"
+  fetched_at: "2026-07-02"
+hard_requirements:
+  - {text: "3+ years Solutions/Sales Engineering (or similar)", kind: yoe, enforced_by: yoe}
+  - {text: "3+ years Deep Learning / Machine Learning (TensorFlow or PyTorch)", kind: yoe, enforced_by: domain}
+  - {text: "BS/MS/PhD in EE/CS/Stats/Physics/Engineering or equivalent", kind: education, enforced_by: none}
+  - {text: "Track record deploying in cloud (AWS/GCP/Azure)", kind: skill, enforced_by: domain}
+must_haves:
+  - {text: "Solutions/sales engineering, customer-facing PoCs", signal_id: solutions_engineering}
+  - {text: "Deep learning / ML (TF/PyTorch)", signal_id: deep_learning}
+  - {text: "GPU / CUDA / NVIDIA SDKs", signal_id: gpu_cuda}
+  - {text: "Cloud deployment", signal_id: cloud_deploy}
+nice_to_haves:
+  - {text: "MLOps/DevOps (Docker, Kubernetes)", signal_id: mlops_devops}
+  - {text: "Cloud SA certification; GPU-based systems, distributed/parallel computing", signal_id: gpu_cuda}
+explicit_exclusions:
+  - {text: "Purely non-technical or web-design backgrounds are not a fit", enforced_by: domain, note: "deep DL/ML + GPU depth required"}
+coaching_notes: >-
+  Pair a customer-facing SA/SE track with concrete DL/ML work (TensorFlow/PyTorch)
+  and, ideally, GPU/CUDA experience — that GPU depth is the differentiator here.
+  cv_primary is OFF: computer-vision background is welcome for NVIDIA AI/ML.

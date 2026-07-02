@@ -1,0 +1,12 @@
+[
+  {"slug": "google_applied-aiml-engineer-finance-dna", "org": "Google", "role": "Applied AI/ML Engineer, Finance DnA", "url": "https://www.google.com/about/careers/applications/jobs/results/116217756239438534-applied-aiml-engineer"},
+  {"slug": "google_swe-ml-fleet-intelligence", "org": "Google", "role": "Software Engineer, ML Fleet Intelligence", "url": "https://careers.google.com/jobs/results/119213330672820934-software-engineer/"},
+  {"slug": "anthropic_forward-deployed-engineer-applied-ai", "org": "Anthropic", "role": "Forward Deployed Engineer, Applied AI", "url": "https://job-boards.greenhouse.io/anthropic/jobs/4985877008"},
+  {"slug": "databricks_solutions-architect-digital-native", "org": "Databricks", "role": "Solutions Architect, Digital Native Business", "url": "https://www.databricks.com/company/careers/field-engineering/solutions-architect---digital-native-business-6117719002"},
+  {"slug": "databricks_resident-solutions-architect", "org": "Databricks", "role": "Resident Solutions Architect", "url": "https://www.databricks.com/company/careers/professional-services-operations/resident-solutions-architect-8341311002"},
+  {"slug": "databricks_solutions-architect-public-sector", "org": "Databricks", "role": "Solutions Architect, Public Sector", "url": "https://www.databricks.com/company/careers/field-engineering/solutions-architect---public-sector--6841734002"},
+  {"slug": "microsoft_mts-applied-scientist-copilot", "org": "Microsoft", "role": "Member of Technical Staff, Applied Scientist (Copilot)", "url": "https://microsoft.ai/job/member-of-technical-staff-applied-scientist/"},
+  {"slug": "aws_solutions-architect-associate", "org": "AWS", "role": "Solutions Architect, Associate (2026)", "url": "https://www.amazon.jobs/en/jobs/3204552/solutions-architect-2026-us"},
+  {"slug": "aws_annapurna-ml-systems-silicon", "org": "AWS / Annapurna Labs", "role": "ML Systems & Silicon Innovation (Early Career)", "url": "https://www.amazon.jobs/en/jobs/3175965/2026-annapurna-labs-at-aws-early-career-us-machine-learning-systems-silicon-innovation"},
+  {"slug": "nvidia_solutions-architect-ai-ml", "org": "NVIDIA", "role": "Solutions Architect, AI and ML", "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Solutions-Architect--AI-and-ML_JR2000691"}
+]

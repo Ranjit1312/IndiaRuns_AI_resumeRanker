@@ -1,0 +1,26 @@
+source:
+  org: "Databricks"
+  role_title: "Resident Solutions Architect (link now resolves to: Sr. Forward Deployed Engineer, CME&G)"
+  url: "https://www.databricks.com/company/careers/professional-services-operations/resident-solutions-architect-8341311002"
+  fetched_at: "2026-07-02"
+  note: "The requested 'Resident Solutions Architect' greenhouse id now maps to a Sr. Forward Deployed Engineer posting; profile authored to the actual fetched JD."
+hard_requirements:
+  - {text: "6+ years in data engineering, data platforms & analytics, or software engineering", kind: yoe, enforced_by: yoe}
+  - {text: "Deep experience with Apache Spark incl. runtime internals", kind: skill, enforced_by: domain}
+  - {text: "Coding in Python/Scala/JavaScript/TypeScript", kind: skill, enforced_by: domain}
+  - {text: "Travel to customers ~20%", kind: location, enforced_by: none}
+must_haves:
+  - {text: "Production-grade end-to-end delivery", signal_id: production_delivery}
+  - {text: "Apache Spark internals & distributed computing", signal_id: spark_distributed}
+  - {text: "MLOps, ML/AI models & CI/CD", signal_id: mlops_ai}
+  - {text: "Strong polyglot coding", signal_id: coding_polyglot}
+nice_to_haves:
+  - {text: "Cloud ecosystem breadth (AWS/Azure/GCP)", signal_id: cloud_ecosystems}
+  - {text: "Databricks certification; enterprise stakeholder delivery", signal_id: delivery_stakeholders}
+explicit_exclusions:
+  - {text: "Pure-research or frontend-only profiles without production delivery are weaker fits", enforced_by: domain, note: "billable, hands-on productionizing role"}
+coaching_notes: >-
+  This is a hands-on billable FDE — stale_ic_role is ON, so recent production
+  coding matters. Surface end-to-end systems you shipped on Spark/Databricks with
+  MLOps/CI-CD, and quantify customer outcomes. only_consulting is OFF (delivery/
+  services experience is the job).

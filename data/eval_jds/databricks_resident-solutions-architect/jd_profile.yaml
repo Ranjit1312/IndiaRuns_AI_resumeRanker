@@ -1,0 +1,75 @@
+schema_version: 1
+role:
+  title: "Sr. Forward Deployed Engineer — Databricks (CME&G)"
+  company: "Databricks"
+  domain: "Forward-deployed / delivery engineering (data & AI)"
+  summary: >-
+    Hands-on, billable Forward Deployed Engineer who builds and productionizes
+    end-to-end data & AI solutions on Databricks for enterprise customers: owns
+    architecture and design, implements data pipelines + ML/AI model integration
+    + user-facing apps, and delivers to spec with strong customer empathy.
+  ideal_experience:
+    min_years: 6
+    max_years: 14
+    peak_years: 9.0
+    sigma_years: 3.0
+  notice_preference_days: 60
+locations:
+  preferred: []
+  acceptable: []
+  relocation_acceptable: true
+  remote_acceptable: true
+signals:
+  - id: production_delivery
+    label: "production-grade end-to-end solution delivery"
+    query: >-
+      delivering production grade end to end systems reference architectures
+      custom applications productionizing data and AI solutions for customers
+    evidence_regex: 'production[- ]?grade|end[- ]to[- ]end|reference architecture|productioniz|deliver(?:y|ed).{0,20}production'
+    dense_weight: 0.24
+  - id: spark_distributed
+    label: "Apache Spark internals & distributed computing"
+    query: "deep experience with apache spark distributed computing spark runtime internals delta lake"
+    evidence_regex: 'spark|distributed comput|spark runtime|delta lake|lakehouse'
+    dense_weight: 0.20
+  - id: coding_polyglot
+    label: "strong coding (Python/Scala/JS/TS)"
+    query: "writing production code in python scala javascript typescript and modern frameworks"
+    evidence_regex: '\bpython\b|\bscala\b|javascript|typescript'
+    dense_weight: 0.16
+  - id: cloud_ecosystems
+    label: "cloud ecosystems (AWS/Azure/GCP)"
+    query: "working knowledge of aws azure gcp cloud ecosystems with expertise in one"
+    evidence_regex: '\baws\b|azure|\bgcp\b|cloud'
+    dense_weight: 0.12
+  - id: mlops_ai
+    label: "MLOps, ML/AI models & CI/CD"
+    query: "mlops ml and ai models ai apis ci cd for production deployments"
+    evidence_regex: 'mlops|ci/cd|ml/ai|model (?:deploy|integration|serving)|ai api'
+    dense_weight: 0.14
+  - id: delivery_stakeholders
+    label: "technical project delivery with enterprise stakeholders"
+    query: "technical project delivery managing scope timelines outcomes enterprise clients stakeholders"
+    evidence_regex: 'project delivery|stakeholder|enterprise client|scope.{0,20}timeline|manag(?:e|ing).{0,20}(?:scope|delivery)'
+    dense_weight: 0.10
+dense_extras:
+  yoe_fit_weight: 0.09
+  domain_ratio_weight: 0.10
+cross_encoder_query: >-
+  A hands-on Forward Deployed Engineer who productionizes end-to-end data and AI
+  solutions on Databricks and Apache Spark for enterprise customers, codes
+  strongly in Python/Scala/TypeScript across AWS/Azure/GCP, applies MLOps and
+  CI/CD, and delivers technical projects to spec with enterprise stakeholders.
+domain:
+  in_domain_terms: [forward deployed engineer, data engineering, spark, cloud, mlops,
+                    software engineering, solutions delivery, data platform]
+  out_of_domain_terms: [pure research, frontend-only design, marketing, quota-only sales,
+                        non-technical]
+  in_domain_regex: 'forward deployed|data engineer|spark|cloud|mlops|software engineer|data platform|solutions? delivery'
+  out_of_domain_regex: 'pure research|frontend[- ]only|marketing|quota[- ]only|non[- ]technical'
+relevant_skill_regex: 'spark|\bpython\b|\bscala\b|typescript|\baws\b|azure|\bgcp\b|mlops|ci/cd|delta|databricks|distributed|kafka'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: true}

@@ -1,0 +1,75 @@
+schema_version: 1
+role:
+  title: "Solutions Architect, AI and ML"
+  company: "NVIDIA"
+  domain: "AI/ML cloud solutions architecture (pre-sales)"
+  summary: >-
+    Customer-facing Solutions Architect helping strategic cloud customers adopt
+    NVIDIA GPU hardware/software and build & deploy ML/DL and data-science
+    solutions on cloud GPU platforms: builds PoCs, delivers technical content,
+    and partners with sales to secure new business.
+  ideal_experience:
+    min_years: 3
+    max_years: 10
+    peak_years: 6.0
+    sigma_years: 2.5
+  notice_preference_days: 60
+locations:
+  preferred: [redmond]
+  acceptable: [seattle, bellevue]
+  relocation_acceptable: true
+  remote_acceptable: false
+signals:
+  - id: solutions_engineering
+    label: "solutions / sales engineering (customer-facing PoCs)"
+    query: >-
+      solutions engineering sales engineering customer facing building proofs of
+      concept partnering with sales to secure business
+    evidence_regex: 'solutions? (?:architect|engineer)|sales engineer|customer[- ]facing|proof of concept|\bpoc\b'
+    dense_weight: 0.22
+  - id: deep_learning
+    label: "deep learning / machine learning (TensorFlow/PyTorch)"
+    query: "deep learning machine learning tensorflow pytorch neural networks model training"
+    evidence_regex: 'deep learning|machine learning|tensorflow|pytorch|neural network'
+    dense_weight: 0.22
+  - id: gpu_cuda
+    label: "GPU / CUDA / NVIDIA SDKs"
+    query: "gpu accelerated computing cuda nvidia gpus rapids triton tensorrt parallel programming"
+    evidence_regex: '\bgpu\b|\bcuda\b|nvidia|rapids|triton|tensorrt'
+    dense_weight: 0.18
+  - id: cloud_deploy
+    label: "deploying solutions on cloud (AWS/GCP/Azure)"
+    query: "deploying solutions in cloud computing environments aws gcp azure"
+    evidence_regex: '\baws\b|\bgcp\b|azure|cloud comput'
+    dense_weight: 0.14
+  - id: mlops_devops
+    label: "MLOps / DevOps (Docker, Kubernetes, data center)"
+    query: "devops mlops docker containers kubernetes data center deployments"
+    evidence_regex: 'docker|kubernetes|\bk8s\b|mlops|devops|container'
+    dense_weight: 0.12
+  - id: scripting_python
+    label: "scripting / programming (Python)  [supporting]"
+    query: "scripting and programming in python good debugging skills"
+    evidence_regex: '\bpython\b|scripting'
+    dense_weight: 0.08
+dense_extras:
+  yoe_fit_weight: 0.08
+  domain_ratio_weight: 0.10
+cross_encoder_query: >-
+  A customer-facing Solutions Architect who helps cloud customers adopt NVIDIA
+  GPUs and build/deploy deep-learning and ML solutions with TensorFlow or PyTorch
+  on AWS/GCP/Azure, has CUDA and GPU systems experience, applies Docker/Kubernetes
+  MLOps, scripts in Python, and builds PoCs partnering with sales.
+domain:
+  in_domain_terms: [solutions architect, deep learning, machine learning, gpu, cuda,
+                    cloud, mlops, ai, data science]
+  out_of_domain_terms: [frontend design, marketing, quota-only sales, web design,
+                        non-technical]
+  in_domain_regex: 'solutions architect|deep learning|machine learning|\bgpu\b|\bcuda\b|cloud|mlops|\bai\b'
+  out_of_domain_regex: 'frontend design|marketing|quota[- ]only|web design|non[- ]technical'
+relevant_skill_regex: '\bgpu\b|\bcuda\b|deep learning|machine learning|tensorflow|pytorch|\baws\b|\bgcp\b|azure|docker|kubernetes|\bpython\b|rapids|triton'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: false}

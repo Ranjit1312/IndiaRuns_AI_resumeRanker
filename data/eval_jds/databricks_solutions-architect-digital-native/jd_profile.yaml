@@ -1,0 +1,79 @@
+schema_version: 1
+role:
+  title: "Solutions Architect, Digital Native Business"
+  company: "Databricks"
+  domain: "Pre-sales solutions architecture (data & AI platform)"
+  summary: >-
+    Field-engineering pre-sales Solutions Architect for digital-native accounts:
+    partner with sales to provide technical leadership, consult on big-data
+    architectures, build proofs of concept spanning data engineering, data
+    science/ML and SQL analytics on Databricks, and develop technical champions.
+  ideal_experience:
+    min_years: 5
+    max_years: 12
+    peak_years: 7.0
+    sigma_years: 2.5
+  notice_preference_days: 60
+locations:
+  preferred: []
+  acceptable: []
+  relocation_acceptable: true
+  remote_acceptable: true
+signals:
+  - id: presales_architecture
+    label: "pre-sales solutions architecture & technical leadership"
+    query: >-
+      pre-sales solutions architect providing technical leadership building
+      proofs of concept for customers translating business problems to solutions
+    evidence_regex: 'pre[- ]?sales|solutions architect|technical (?:lead|advisor|champion)|proof of concept|\bpoc\b|customer[- ]facing'
+    dense_weight: 0.24
+  - id: big_data_platform
+    label: "distributed big-data systems (Spark/Hadoop/Kafka)"
+    query: >-
+      building distributed data systems big data architectures apache spark
+      hadoop kafka delta lake lakehouse
+    evidence_regex: 'spark|hadoop|kafka|distributed (?:data|comput)|delta lake|lakehouse|big data'
+    dense_weight: 0.22
+  - id: data_science_ml
+    label: "data science / machine learning tooling"
+    query: >-
+      data science and machine learning pandas scikit-learn pytorch tensorflow
+      model development
+    evidence_regex: 'pandas|scikit[- ]?learn|pytorch|tensorflow|machine learning|\bml\b'
+    dense_weight: 0.16
+  - id: programming_python_sql
+    label: "programming in Python and SQL"
+    query: "programming and debugging in python and sql for data workflows"
+    evidence_regex: '\bpython\b|\bsql\b'
+    dense_weight: 0.14
+  - id: cloud_platforms
+    label: "public cloud (AWS/Azure/GCP)"
+    query: "building solutions on public cloud providers aws azure gcp"
+    evidence_regex: '\baws\b|azure|\bgcp\b|google cloud|public cloud'
+    dense_weight: 0.14
+  - id: oss_advocacy
+    label: "open-source data community (Spark/Delta/MLflow)  [nice-to-have]"
+    query: "promoting and contributing to open source spark delta lake mlflow community"
+    evidence_regex: 'open[- ]source|mlflow|delta lake|apache'
+    dense_weight: 0.06
+dense_extras:
+  yoe_fit_weight: 0.08
+  domain_ratio_weight: 0.10
+cross_encoder_query: >-
+  A pre-sales Solutions Architect who partners with sales to give technical
+  leadership, designs big-data architectures on Apache Spark and the cloud,
+  builds proofs of concept across data engineering, data science and ML, codes in
+  Python and SQL, and grows technical champions among data teams.
+domain:
+  in_domain_terms: [solutions architect, pre-sales, data engineering, data science,
+                    spark, cloud, machine learning, big data, sql, lakehouse]
+  out_of_domain_terms: [frontend design, marketing, quota-only sales, graphic design,
+                        non-technical account management]
+  in_domain_regex: 'solutions architect|pre[- ]?sales|data engineer|data science|spark|cloud|machine learning|big data'
+  out_of_domain_regex: 'graphic design|marketing|quota[- ]only|non[- ]technical|frontend design'
+relevant_skill_regex: 'spark|\bpython\b|\bsql\b|\baws\b|azure|\bgcp\b|hadoop|kafka|pytorch|tensorflow|scikit|delta|mlflow|databricks|distributed'
+red_flags:
+  cv_primary:      {enabled: false}
+  job_hopper:      {enabled: true}
+  only_consulting: {enabled: false}
+  stale_ic_role:   {enabled: false}
