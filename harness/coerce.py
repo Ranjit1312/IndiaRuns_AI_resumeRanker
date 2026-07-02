@@ -36,9 +36,11 @@ class CompileResult:
 # --------------------------------------------------------------------------- #
 # per-block builders (each defensive: bad/empty leaf → sentinel, logged)
 # --------------------------------------------------------------------------- #
-def build_role(env: Environment, backend: Backend, health: dict, hint: str = "") -> dict:
+def build_role(env: Environment, backend: Backend, health: dict, hint: str = "",
+               *, logger=None, on_event=None, leaf_prefix: str = "") -> dict:
     snip = env.slice("qualifications", head=1400)
-    d = llm_query(backend, P.role_prompt(snip) + _hint(hint)) or {}
+    d = llm_query(backend, P.role_prompt(snip) + _hint(hint),
+                  leaf=f"{leaf_prefix}role", logger=logger, on_event=on_event) or {}
     if not isinstance(d, dict):
         d = {}
     title = str(d.get("title") or _first_line(env.jd) or "Role").strip()
@@ -60,9 +62,11 @@ def build_role(env: Environment, backend: Backend, health: dict, hint: str = "")
     }
 
 
-def build_locations(env: Environment, backend: Backend, health: dict, hint: str = "") -> dict:
+def build_locations(env: Environment, backend: Backend, health: dict, hint: str = "",
+                    *, logger=None, on_event=None, leaf_prefix: str = "") -> dict:
     snip = env.slice("location", "about", head=600)
-    d = llm_query(backend, P.locations_prompt(snip) + _hint(hint))
+    d = llm_query(backend, P.locations_prompt(snip) + _hint(hint),
+                  leaf=f"{leaf_prefix}locations", logger=logger, on_event=on_event)
     if not isinstance(d, dict):
         health["defaulted"].append("locations")
         return dict(F.DEFAULT_LOCATIONS)
@@ -74,9 +78,12 @@ def build_locations(env: Environment, backend: Backend, health: dict, hint: str 
     }
 
 
-def build_signals(env: Environment, backend: Backend, health: dict, hint: str = "") -> list[dict]:
+def build_signals(env: Environment, backend: Backend, health: dict, hint: str = "",
+                  *, logger=None, on_event=None, leaf_prefix: str = "",
+                  max_signal_detail: int = MAX_SIGNALS) -> list[dict]:
     snip = env.slice("responsibilities", "qualifications")
-    labels = llm_query(backend, P.signal_labels_prompt(snip) + _hint(hint))
+    labels = llm_query(backend, P.signal_labels_prompt(snip) + _hint(hint),
+                       leaf=f"{leaf_prefix}signals.labels", logger=logger, on_event=on_event)
     if not isinstance(labels, list) or not labels:
         health["defaulted"].append("signals")
         return F.sanitize_signals([{
@@ -84,22 +91,30 @@ def build_signals(env: Environment, backend: Backend, health: dict, hint: str = 
             "query": snip[:160] or "core responsibilities of the role",
             "evidence_regex": None, "dense_weight": 0.2}])
     raw = []
-    for label in [str(x) for x in labels][:MAX_SIGNALS]:
-        det = llm_query(backend, P.signal_detail_prompt(label, snip)) or {}
-        det = det if isinstance(det, dict) else {}
-        raw.append({"id": label, "label": label,
-                    "query": det.get("query") or label,
-                    "evidence_regex": det.get("evidence_regex"),
-                    "dense_weight": det.get("dense_weight", 0.15)})
+    for i, label in enumerate([str(x) for x in labels][:MAX_SIGNALS]):
+        if i < max_signal_detail:      # full detail call for the top labels
+            det = llm_query(backend, P.signal_detail_prompt(label, snip),
+                            leaf=f"{leaf_prefix}signals.detail[{label}]",
+                            logger=logger, on_event=on_event) or {}
+            det = det if isinstance(det, dict) else {}
+            raw.append({"id": label, "label": label,
+                        "query": det.get("query") or label,
+                        "evidence_regex": det.get("evidence_regex"),
+                        "dense_weight": det.get("dense_weight", 0.15)})
+        else:                          # beyond the cap: label as its own query, no API call
+            raw.append({"id": label, "label": label, "query": label,
+                        "evidence_regex": None, "dense_weight": 0.15})
     sigs = F.sanitize_signals(raw)
     return sigs or F.sanitize_signals([{"id": "core_fit", "label": "core role fit",
                                         "query": snip[:160], "evidence_regex": None,
                                         "dense_weight": 0.2}])
 
 
-def build_domain(env: Environment, backend: Backend, health: dict, hint: str = "") -> dict:
+def build_domain(env: Environment, backend: Backend, health: dict, hint: str = "",
+                 *, logger=None, on_event=None, leaf_prefix: str = "") -> dict:
     snip = env.slice("responsibilities", "qualifications")
-    d = llm_query(backend, P.domain_prompt(snip) + _hint(hint))
+    d = llm_query(backend, P.domain_prompt(snip) + _hint(hint),
+                  leaf=f"{leaf_prefix}domain", logger=logger, on_event=on_event)
     if not isinstance(d, dict):
         health["defaulted"].append("domain")
         return dict(F.DEFAULT_DOMAIN)
@@ -113,9 +128,11 @@ def build_domain(env: Environment, backend: Backend, health: dict, hint: str = "
     }
 
 
-def build_relevant_skill(env: Environment, backend: Backend, health: dict, hint: str = "") -> str:
+def build_relevant_skill(env: Environment, backend: Backend, health: dict, hint: str = "",
+                         *, logger=None, on_event=None, leaf_prefix: str = "") -> str:
     snip = env.slice("qualifications", "responsibilities")
-    d = llm_query(backend, P.relevant_skill_prompt(snip) + _hint(hint))
+    d = llm_query(backend, P.relevant_skill_prompt(snip) + _hint(hint),
+                  leaf=f"{leaf_prefix}relevant_skill_regex", logger=logger, on_event=on_event)
     rx = F.safe_regex((d or {}).get("relevant_skill_regex") if isinstance(d, dict) else None)
     if not rx:
         health["defaulted"].append("relevant_skill_regex")
@@ -123,8 +140,10 @@ def build_relevant_skill(env: Environment, backend: Backend, health: dict, hint:
     return rx
 
 
-def build_red_flags(env: Environment, backend: Backend, health: dict, hint: str = "") -> dict:
-    d = llm_query(backend, P.red_flags_prompt(env.slice(head=2500)) + _hint(hint))
+def build_red_flags(env: Environment, backend: Backend, health: dict, hint: str = "",
+                    *, logger=None, on_event=None, leaf_prefix: str = "") -> dict:
+    d = llm_query(backend, P.red_flags_prompt(env.slice(head=2500)) + _hint(hint),
+                  leaf=f"{leaf_prefix}red_flags", logger=logger, on_event=on_event)
     if not isinstance(d, dict):
         health["defaulted"].append("red_flags")
     return F.sanitize_red_flags(d)
@@ -165,23 +184,26 @@ _SENTINELS = {
 
 
 def compile_jd(jd_text: str, backend: Backend, *, method_path: str = METHOD_PATH,
-               max_repairs: int = 2, source: dict | None = None) -> CompileResult:
+               max_repairs: int = 2, source: dict | None = None,
+               logger=None, on_event=None,
+               max_signal_detail: int = MAX_SIGNALS) -> CompileResult:
     env = Environment(jd_text)
     health = {"defaulted": [], "sentineled": [], "repairs": 0,
               "metadata": env.metadata(), "model": getattr(backend, "name", "?")}
+    tel = dict(logger=logger, on_event=on_event)   # threaded into every leaf call
 
-    role = build_role(env, backend, health)
-    signals = build_signals(env, backend, health)
+    role = build_role(env, backend, health, **tel)
+    signals = build_signals(env, backend, health, max_signal_detail=max_signal_detail, **tel)
     profile = {
         "schema_version": 1,
         "role": role,
-        "locations": build_locations(env, backend, health),
+        "locations": build_locations(env, backend, health, **tel),
         "signals": signals,
         "dense_extras": dict(F.DEFAULT_DENSE_EXTRAS),
         "cross_encoder_query": build_cross_encoder(role, signals),
-        "domain": build_domain(env, backend, health),
-        "relevant_skill_regex": build_relevant_skill(env, backend, health),
-        "red_flags": build_red_flags(env, backend, health),
+        "domain": build_domain(env, backend, health, **tel),
+        "relevant_skill_regex": build_relevant_skill(env, backend, health, **tel),
+        "red_flags": build_red_flags(env, backend, health, **tel),
     }
 
     # validate → repair only the failing block (re-call once, then sentinel)
@@ -191,7 +213,9 @@ def compile_jd(jd_text: str, backend: Backend, *, method_path: str = METHOD_PATH
         top = result.top
         if top in _BUILDERS:
             try:
-                profile[top] = _BUILDERS[top](env, backend, health, hint=result.error or "")
+                extra = {"max_signal_detail": max_signal_detail} if top == "signals" else {}
+                profile[top] = _BUILDERS[top](env, backend, health, hint=result.error or "",
+                                              leaf_prefix="repair.", **tel, **extra)
                 if top == "role":  # ce query mentions role fields
                     profile["cross_encoder_query"] = build_cross_encoder(profile["role"], profile["signals"])
             except Exception:  # noqa: BLE001
@@ -204,14 +228,18 @@ def compile_jd(jd_text: str, backend: Backend, *, method_path: str = METHOD_PATH
         elif top not in _SENTINELS and top not in _BUILDERS:
             break   # unlocatable field — stop rather than loop
 
-    meta = build_meta(env, backend, profile, source or {})
+    meta = build_meta(env, backend, profile, source or {}, **tel)
+    if logger is not None:
+        health["telemetry"] = logger.summary()
     return CompileResult(
         profile=profile, meta=meta, health=health, validation=result,
         profile_yaml=to_yaml(profile), meta_yaml=to_yaml(meta))
 
 
-def build_meta(env: Environment, backend: Backend, profile: dict, source: dict) -> dict:
-    d = llm_query(backend, P.meta_extras_prompt(env.slice("qualifications", "responsibilities", head=1200)))
+def build_meta(env: Environment, backend: Backend, profile: dict, source: dict,
+               *, logger=None, on_event=None) -> dict:
+    d = llm_query(backend, P.meta_extras_prompt(env.slice("qualifications", "responsibilities", head=1200)),
+                  leaf="meta_extras", logger=logger, on_event=on_event)
     d = d if isinstance(d, dict) else {}
     sigs = profile.get("signals", [])
     out_terms = set(profile.get("domain", {}).get("out_of_domain_terms", []))

@@ -17,6 +17,17 @@ GEMMA_MODELS = ["gemma-4-26b-a4b-it", "gemma-4-31b-it", "gemma-3-27b-it"]
 GEMINI_MODELS = ["gemini-3-flash"]          # native response_schema path
 DEFAULT_MODEL = "gemma-4-26b-a4b-it"
 
+# Per-call HTTP timeout (ms). Caps worst-case wall time so a rate-limited/slow
+# call fails fast instead of the SDK backing off silently for minutes.
+REQUEST_TIMEOUT_MS = 60000
+
+
+class RateLimitError(RuntimeError):
+    """Raised when the backend hits a 429 / RESOURCE_EXHAUSTED response.
+
+    Lets the UI show the free-tier rate-cap guidance instead of a generic error.
+    """
+
 
 @runtime_checkable
 class Backend(Protocol):
@@ -56,20 +67,43 @@ class GoogleGenAIBackend:
         self.model = model
         # Only Gemini models expose response_schema/system_instruction reliably.
         self.supports_response_schema = model.startswith("gemini")
+        # Last-call token usage, surfaced for telemetry (None until a call runs).
+        self.last_usage: dict | None = None
 
     def generate(self, prompt: str, system: str | None = None,
                  temperature: float = 0.2, max_tokens: int = 2048) -> str:
+        from google.genai import errors as genai_errors
         from google.genai import types
-        cfg_kwargs = dict(temperature=temperature, max_output_tokens=max_tokens)
+        cfg_kwargs = dict(
+            temperature=temperature, max_output_tokens=max_tokens,
+            # Per-request timeout so a rate-limited/slow call fails fast.
+            http_options=types.HttpOptions(timeout=REQUEST_TIMEOUT_MS),
+        )
         contents = prompt
         if system:
             if self.supports_response_schema:      # Gemini: real system slot
                 cfg_kwargs["system_instruction"] = system
             else:                                   # Gemma: prepend to the prompt
                 contents = f"{system}\n\n{prompt}"
-        resp = self._client.models.generate_content(
-            model=self.model, contents=contents,
-            config=types.GenerateContentConfig(**cfg_kwargs))
+        try:
+            resp = self._client.models.generate_content(
+                model=self.model, contents=contents,
+                config=types.GenerateContentConfig(**cfg_kwargs))
+        except genai_errors.APIError as exc:
+            # Surface 429 / RESOURCE_EXHAUSTED as a typed error; let others propagate.
+            code = getattr(exc, "code", None)
+            status = str(getattr(exc, "status", "") or "")
+            if code == 429 or "RESOURCE_EXHAUSTED" in status.upper() \
+                    or "RESOURCE_EXHAUSTED" in str(exc).upper():
+                raise RateLimitError(str(exc)) from exc
+            raise
+        # Capture token usage defensively (attribute names per google-genai contract).
+        usage = getattr(resp, "usage_metadata", None)
+        self.last_usage = {
+            "prompt_tokens": getattr(usage, "prompt_token_count", None) if usage else None,
+            "output_tokens": getattr(usage, "candidates_token_count", None) if usage else None,
+            "total_tokens": getattr(usage, "total_token_count", None) if usage else None,
+        }
         return (resp.text or "").strip()
 
     def embed(self, texts: list[str], model: str = "gemini-embedding-001") -> list[list[float]]:

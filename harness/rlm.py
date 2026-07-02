@@ -9,10 +9,12 @@ delegate*, not by leaf reasoning — is why the root is code, not the model.
 from __future__ import annotations
 
 import re
+import time
 from typing import Any
 
 from .backends import Backend
 from .jsonutil import extract_json
+from .logging_utils import LeafEntry
 from .prompts import SYSTEM
 
 MAX_SNIPPET = 6000   # cap each leaf's view (RLM "bounded output" spirit)
@@ -87,20 +89,49 @@ class Environment:
         return text[:MAX_SNIPPET]
 
 
-def llm_query(backend: Backend, prompt: str, *, retries: int = 1,
-              temperature: float = 0.2, max_tokens: int = 2048) -> Any:
+def llm_query(backend: Backend, prompt: str, *, leaf: str = "", logger=None,
+              on_event=None, retries: int = 1, temperature: float = 0.2,
+              max_tokens: int = 2048) -> Any:
     """One leaf call: generate → tolerant JSON parse, with a light reformat retry.
 
     Returns the parsed JSON value, or None if the model never produced parseable
-    JSON (the caller then applies a sentinel — we never crash on a bad leaf)."""
+    JSON (the caller then applies a sentinel — we never crash on a bad leaf).
+
+    When `logger` and/or `on_event` are supplied, records the call's prompt,
+    system, raw response, parsed value, elapsed time, token usage, and ok/error
+    for live telemetry. Never raises for parse/API errors (including
+    RateLimitError, which is a RuntimeError caught below); those surface only via
+    the recorded entry's `error` field so the sentinel path keeps working."""
     p = prompt
+    t0 = time.monotonic()
+    raw_response: str | None = None
+    parsed: Any = None
+    error: str | None = None
     for attempt in range(retries + 1):
         try:
-            text = backend.generate(p, system=SYSTEM, temperature=temperature,
-                                    max_tokens=max_tokens)
-            return extract_json(text)
-        except Exception:  # noqa: BLE001 — parse or API hiccup; retry then give up
-            if attempt >= retries:
-                return None
-            p = prompt + "\n\nReturn ONLY valid JSON, nothing else."
-    return None
+            raw_response = backend.generate(p, system=SYSTEM, temperature=temperature,
+                                            max_tokens=max_tokens)
+            parsed = extract_json(raw_response)
+            if parsed is not None:
+                break
+        except Exception as exc:  # noqa: BLE001 — parse or API hiccup; retry then give up
+            error = str(exc)
+            raw_response = None
+        if attempt >= retries:
+            break
+        p = prompt + "\n\nReturn ONLY valid JSON, nothing else."
+
+    elapsed_s = time.monotonic() - t0
+    ok = parsed is not None
+    usage = getattr(backend, "last_usage", None)
+    if logger is not None:
+        logger.record(leaf=leaf, model=getattr(backend, "name", "?"), prompt=prompt,
+                      system=SYSTEM, raw_response=raw_response, parsed=parsed,
+                      elapsed_s=elapsed_s, ok=ok, error=error, tokens=usage)
+    if on_event is not None:
+        entry = logger.entries[-1] if logger is not None else LeafEntry(
+            leaf=leaf, model=getattr(backend, "name", "?"), prompt=prompt,
+            system=SYSTEM, raw_response=raw_response, parsed=parsed,
+            elapsed_s=elapsed_s, ok=ok, error=error, tokens=usage)
+        on_event(entry)
+    return parsed
