@@ -1167,18 +1167,35 @@ with tab_dash:
             if cmp_backend is not None:
                 total_calls = len(dataset) * int(n_repeats) * 3   # 3 methods
                 prog = st.progress(0.0, text="Starting comparison study…")
-                status_ph = st.empty()
-                done = {"n": 0}
+                st.caption("**Live backend log** — streams each model call as it "
+                           "completes (method · score · tokens · latency · errors), "
+                           "so there's activity on screen the whole run.")
+                log_ph = st.empty()
+                done = {"n": 0, "tok": 0, "err": 0, "sec": 0.0}
+                log_lines: list = []
                 partial_rows = []
 
                 def _on_row(row) -> None:
                     done["n"] += 1
+                    done["tok"] += row.tokens or 0
+                    done["sec"] += row.elapsed_s or 0.0
+                    if row.error:
+                        done["err"] += 1
                     partial_rows.append(row)
                     frac = min(1.0, done["n"] / max(1, total_calls))
-                    status = "ERR" if row.error else "ok"
-                    prog.progress(frac, text=f"{done['n']}/{total_calls} calls — "
-                                             f"[{status}] {row.jd_slug}/{row.tier} "
-                                             f"{row.method} rep={row.repeat}")
+                    tag = "✗ ERR" if row.error else "✓ ok "
+                    detail = (row.error[:60] if row.error
+                              else f"score={row.score:5.1f}")
+                    log_lines.append(
+                        f"{tag} {row.jd_slug}/{row.tier:<10} {row.method:<14} "
+                        f"rep={row.repeat} {detail} · {row.tokens or 0}tok · "
+                        f"{row.elapsed_s:.1f}s")
+                    prog.progress(frac, text=f"{done['n']}/{total_calls} calls · "
+                                             f"{done['err']} errors · "
+                                             f"{done['tok']} tok · {done['sec']:.0f}s")
+                    # newest calls last; keep the panel bounded + scrollable
+                    log_ph.code("\n".join(log_lines[-40:]) or "waiting…",
+                                language="text")
 
                 try:
                     study = run_study(dataset, cmp_backend, repeats=int(n_repeats),
@@ -1191,11 +1208,16 @@ with tab_dash:
                     run_dir = os.path.join(EVAL_RUNS_DIR, ts)
                     os.makedirs(run_dir, exist_ok=True)
                     write_report(study, out_dir=run_dir)
+                    # persist the live backend log as a durable run artifact
+                    with open(os.path.join(run_dir, "run_log.txt"), "w",
+                              encoding="utf-8") as _lf:
+                        _lf.write("\n".join(log_lines))
 
                     st.session_state["dash_last_run_ts"] = ts
                     st.success(f"Comparison complete — {len(study.rows)} scored "
-                              f"calls. Wrote `{report_path}`, `{csv_path}`, and a "
-                              f"timestamped copy under `data/eval_study/runs/{ts}/`.")
+                              f"calls. Wrote `{report_path}`, `{csv_path}`, "
+                              f"`run_log.txt`, and a timestamped copy under "
+                              f"`data/eval_study/runs/{ts}/`.")
                 except RateLimitError as exc:
                     st.warning(
                         "Hit the Google AI Studio **free-tier rate cap** "
