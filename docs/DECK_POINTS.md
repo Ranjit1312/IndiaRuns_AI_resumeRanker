@@ -1,274 +1,300 @@
 # Submission Deck — Paste-Ready Points
 
-Project: **Resume-Fit — JD → profile compiler (v1, Module 1)**, built on the
-existing **RedRob interpretable ranking engine** (Repo 1).
+**Track selected: Technical / AI-System track** (Deck 3,
+`docs.google.com/presentation/d/1wbyNRn6gNWY_KnmR3_w-FefjK4GM9kuhohOts582ksU`).
+Chosen over the Idea/UX track (too shallow for our engineering) and the
+Growth/Monetization track (we have no monetization/growth-loop story). This track's
+mandatory elements — AI decision flow, system architecture, data/intelligence layer —
+are exactly our strengths.
 
-> Slide headings below are copied **verbatim** from the challenge Google Slides
-> template. Bullets under each are paste-ready and honor the no-overclaiming
-> rules: **no benchmark numbers are stated as proven**; any improvement is marked
-> **estimated/projected**, and comparisons point to the Repo 1 README / HF demo
-> homepage rather than quoting a figure here.
+Project: **Resume-Fit — an AI-native JD→profile compiler + candidate fit layer**, built
+on the existing **RedRob interpretable ranking engine** (Repo 1).
 
----
+> Claim rules honored throughout: **no benchmark number is stated as proven** (nothing in
+> this repo has been formally benchmarked yet); any improvement is marked
+> **estimated/projected**; and every comparison vs direct-LLM ranking points to the
+> **Repo 1 README / HF demo homepage** rather than quoting a figure here.
 
-## Team Name :
-- `<<TEAM_NAME>>`  *(TO FILL)*
-
-## Problem Statement :
-- Traditional candidate matching is keyword/ATS-based: it misses context, can't
-  explain *why* a candidate ranks where they do, and treats every job description
-  the same. Recruiters get opaque scores; candidates get no actionable signal.
-- Before any ranking can be trustworthy, the **job description itself must be
-  turned into a precise, machine-checkable specification** of what the role
-  actually needs — today that step is manual, inconsistent, and error-prone.
-
-## Team Leader Name :
-- `<<TEAM_LEADER_NAME>>`  *(TO FILL)*
+**Confirmed links**
+- GitHub: `https://github.com/Ranjit1312/IndiaRuns_AI_resumeRanker`
+- HF Space (live demo): `https://huggingface.co/spaces/Ranjit1312/Resume_Ranker`
+- Repo 1 (RedRob ranker, reference for comparison numbers): `https://github.com/Ranjit1312/redrob_indiaRuns`
 
 ---
 
-## Solution Overview
+## Slide 1 — Redrob Context & Ideathon Scope *(positioning; context text is pre-filled)*
+- **We extend Redrob's core hiring capability, we don't rebuild it.** Redrob already
+  ranks candidates; we add the missing *front half* (turn any JD into a precise,
+  machine-checkable spec) and a *candidate-facing* layer (fit + coaching).
+- **New AI-native workflow:** a JD-compiler that produces the exact config the RedRob
+  ranker consumes — making ranking reproducible and auditable instead of ad-hoc.
+- **Why Redrob is uniquely positioned:** the value only exists because RedRob's
+  interpretable ranking engine exists; our harness plugs directly into its own schema and
+  validator.
 
-**What is your proposed solution?**
-- **Resume-Fit** — a candidate-centric tool built on top of the existing
-  **RedRob interpretable ranking engine**. This submission delivers **Module 1**:
-  a **model-agnostic harness** that compiles *any* job description (free prose)
-  into a **schema-valid `jd_profile.yaml`** — the config that drives the ranking
-  engine — plus a coaching sidecar `jd_meta.yaml`.
-- The compiler is a **depth-1 Recursive Language Model (RLM) harness**
-  (arXiv 2512.24601): a deterministic root slices the JD and dispatches focused
-  leaf extractions (one sub-field each), rather than one giant LLM call.
-- Ships on **Google AI Studio — Gemma 4** (BYO API key, session-only, never
-  stored), deployed as a **Streamlit Hugging Face Space**. Backend is
-  model-agnostic (Gemma 4 variants and Gemini-3-Flash are selectable).
-
-**What differentiates your approach from traditional candidate matching systems?**
-- **The engineering is in the harness, not the LLM call.** Schema-constrained
-  generation → validation against the engine's own schema → a **bounded
-  self-repair loop** (re-call only the failing block) → **per-section
-  decomposition** fallback → sentinel/default graceful degradation. Result:
-  **it never emits an invalid file.**
-- **Validation is authoritative:** we reuse the ranking engine's *own*
-  `redrob_ranker.profile.load` (JSON-Schema + regex compilation + precise field
-  errors) — so a "valid" profile is valid *by the engine's definition*, not the
-  LLM's opinion.
-- **RLM framing:** treat the JD as an external variable; a small model performs
-  better by learning *when/how to delegate* focused extractions, not by doing one
-  monolithic call.
-- We validated the compiler against **10 hand-authored gold JDs** across domains
-  (Amazon, Anthropic, Databricks, Google, NVIDIA, Stripe).
+## Slide 2 — Team & Problem Statement
+- **Team Name:** `<<TEAM_NAME>>`  *(TO FILL)*
+- **Team Members:** `<<TEAM_MEMBERS>>`  *(TO FILL)*
+- **Problem Statement:** Job descriptions are unstructured prose, so candidate ranking is
+  either keyword/ATS matching (shallow, unexplainable) or a single opaque LLM call
+  (unreliable, unauditable). There is no precise, machine-checkable bridge from "JD text"
+  to "what the ranking engine should actually score."
 
 ---
 
-## JD Understanding & Candidate Evaluation
+## Slide 3 — Problem Definition
+- **What problem are you solving?** Converting free-form JDs into a *structured, validated
+  specification* the ranking engine can score — and giving candidates an explainable fit
+  signal — without a black-box model.
+- **Who experiences it?** Recruiters (opaque scores they can't defend) and candidates (no
+  actionable feedback on *why* they fit or don't).
+- **Why is the current approach insufficient?** Keyword/ATS matching misses context and
+  role nuance; a single large-LLM call can hallucinate fields, isn't schema-valid, and
+  can't be audited. Neither yields a reproducible, engine-ready spec.
 
-**What are the key requirements extracted from the JD?**
-- The harness extracts the JD into the engine's structured schema, including:
-  role/domain terms and **`domain.out_of_domain_terms`** (the general
-  disqualifier lever), skill/experience signals, and role-behavior flags such as
-  `only_consulting`, `stale_ic_role`, and `cv_primary`.
-- Hard requirements the engine can't numerically score (degree, travel, visa)
-  are captured in the `jd_meta.yaml` sidecar as advisory (`enforced_by: none`),
-  so nothing is silently dropped.
-- Validated contract findings from the 10 real roles, e.g.: `only_consulting`
-  must be **off** for pre-sales / Solutions-Architect / Forward-Deployed roles;
-  `stale_ic_role` is per-role (on only for hands-on IC coding); `cv_primary` is
-  off for NVIDIA AI/ML (computer-vision background is welcome there).
+## Slide 4 — Opportunity & Vision
+- **Why is this an important opportunity?** Every downstream ranking decision is only as
+  good as the JD→spec step; getting it right makes the *entire* RedRob ranking pipeline
+  more precise, explainable, and trustworthy.
+- **Future state we enable:** any JD → a guaranteed schema-valid profile in seconds →
+  transparent, per-signal ranking → candidate-facing gap coaching. A closed loop from job
+  post to actionable candidate feedback, all interpretable.
 
-**Which candidate signals are most important / How does your solution evaluate
-candidate fit beyond keyword matching?**
-- Fit is driven by the **RedRob interpretable ranking engine**, which scores
-  structured per-signal criteria defined by the compiled `jd_profile.yaml` —
-  not raw keyword overlap. Signals combine domain relevance, disqualifier terms,
-  and role-behavior flags.
-- **Module 2 (Phase 2, in progress):** resume → candidate schema → interpretable
-  **rules engine** → **per-signal gap analysis** + human-in-the-loop correction,
-  so a candidate sees *which* signals helped or hurt and can correct bad parses.
-- *Note: the deep candidate-fit scoring is the ranking engine's job — see the
-  Repo 1 README for its methodology and any reported comparison numbers.*
-
----
-
-## Ranking Methodology
-
-**How does your system retrieve, score, and rank candidates?**
-- Ranking is performed by the **RedRob interpretable ranking engine** (Repo 1),
-  configured by the **`jd_profile.yaml`** this harness produces. This submission
-  (Module 1) is the **JD → profile compiler** that makes that ranking precise and
-  reproducible.
-
-**What models, algorithms, or heuristics are used?**
-- **Compiler:** depth-1 **RLM harness** over **Gemma 4** (model-agnostic;
-  Gemini-3-Flash selectable). Deterministic root decomposition + focused leaf
-  extractions + bounded repair.
-- **Ranking engine:** interpretable, rule/criteria-based scoring driven by the
-  schema — **no LightGBM / no black-box model** (interpretability by design).
-  See the Repo 1 README for the exact scoring method.
-
-**How are multiple candidate signals combined into a final ranking?**
-- Signals are combined by the engine's transparent per-criterion scoring as
-  specified in the compiled profile (domain terms, disqualifiers, role-behavior
-  flags). Because the profile is schema-validated by the engine's own loader, the
-  combination logic is deterministic and auditable.
-- *For how the combined ranking compares to direct-LLM-call ranking and other
-  methods: **actual comparison numbers are provided in the Repo 1 README and on
-  the HF demo app's homepage for reference.***
+## Slide 5 — Solution Overview
+- **What is the solution?** **Resume-Fit** — a **model-agnostic harness** that compiles any
+  JD (free prose) into a **schema-valid `jd_profile.yaml`** (the config that drives the
+  RedRob ranker) plus a coaching sidecar `jd_meta.yaml`. **Module 1 is live** on a
+  Streamlit HF Space; **Module 2** (resume→fit + per-signal gap analysis) is in progress.
+- **Why AI-native, not AI-assisted?** The LLM is embedded inside a **deterministic control
+  loop**, not called once for an answer: a depth-1 **Recursive Language Model (RLM)**
+  (arXiv 2512.24601) treats the JD as an external variable, a deterministic root **slices
+  it and dispatches focused leaf extractions**, then **validates → self-repairs →
+  degrades** structurally. The system *reasons about structure*; the model only fills
+  bounded sub-fields.
+- **Which Redrob capability it builds upon:** the **RedRob interpretable ranking engine** —
+  we reuse its exact JSON-Schema and its own `redrob_ranker.profile.load` validator, so a
+  "valid" profile is valid *by the engine's definition*.
 
 ---
 
-## Explainability & Data Validation
+## Slide 6 — User Journey / Workflow Diagram  *(Mandatory Visual)*
+**Bullets:**
+- **How a user interacts:** paste a JD (or upload PDF/DOCX) + your own Google AI Studio key
+  (session-only) → click Compile → watch each extraction stream live → edit in the
+  human-in-the-loop panel → download `jd_profile.yaml` + `jd_meta.yaml`.
+- **Information flow:** JD prose → structured profile → validated → handed to the RedRob
+  ranker, which scores candidates against it.
+- **Where it integrates with Redrob:** the emitted profile *is* the ranker's input config —
+  zero glue code.
 
-**How are ranking decisions explained?**
-- The ranking engine is **interpretable by design** (rules/criteria, no black-box
-  model), so each signal's contribution is inspectable. The coaching
-  `jd_meta.yaml` sidecar further surfaces *why* each JD requirement matters.
-- Module 2 adds **per-signal gap analysis** with a human-in-the-loop correction
-  form — every score maps back to a named, editable signal.
+**Diagram (Mermaid):**
+```mermaid
+flowchart LR
+    A["JD — paste / upload PDF·DOCX"] --> B["RLM compile<br/>root slices JD → leaf extractions"]
+    B --> C{"Validate<br/>engine's own profile.load"}
+    C -- valid --> E["jd_profile.yaml + jd_meta.yaml"]
+    C -- invalid --> D["Bounded repair<br/>re-call block → decompose → sentinel"]
+    D --> C
+    E --> F["HITL edit in UI"]
+    F --> G["RedRob ranking engine"]
+    G --> H["Ranked candidates + coaching"]
+```
 
-**How do you prevent hallucinations or unsupported justifications?**
-- **Schema-constrained generation + authoritative validation:** every field must
-  pass the engine's own `redrob_ranker.profile.load` (JSON-Schema + regex). An
-  LLM cannot introduce a field or value the schema doesn't allow.
-- **Bounded self-repair:** on a validation failure the harness re-calls **only
-  the failing block**, then falls back to **per-section decomposition**, then to
-  **sentinel/default graceful degradation** — so output is always schema-valid,
-  never a hallucinated free-text blob. **The harness never emits an invalid file.**
+## Slide 7 — AI Logic & Decision Flow  *(Mandatory Visual)*
+**Bullets:**
+- **Where AI intervenes:** only at the **leaves** — focused, single-sub-field extractions
+  (role, signals, domain terms, disqualifier flags, etc.). The orchestration is
+  deterministic code, not the model.
+- **How decisions are made:** each leaf output is **schema-constrained**, then checked by
+  the engine's validator; on failure the root **re-calls only the failing block**, then
+  falls back to **per-section decomposition**, then to **sentinel/default degradation** —
+  so output is *always* schema-valid, never a hallucinated blob.
+- **How models/reasoning interact:** root (deterministic planner) ⇄ leaf `llm_query`
+  (bounded extraction) ⇄ authoritative validator (accept / reject with a precise field
+  error that seeds the repair). Model-agnostic: Gemma 4 variants or Gemini-3-Flash.
 
-**How does your solution handle inconsistent, low-quality, or suspicious profiles?**
-- The same validate → bounded-repair → decompose → sentinel-degrade pipeline
-  makes malformed or ambiguous JD input **degrade gracefully to a valid, minimal
-  profile** rather than failing or fabricating.
-- Gold JDs were fetched **verbatim via structured sources** (Greenhouse API,
-  Workday CXS, Amazon JSON, JSON-LD) — never through a summarizer — so eval data
-  integrity is preserved.
-- *(Candidate-profile anti-gaming / suspicious-resume handling is part of the
-  Module 2 rules-engine + HITL work, in progress for Phase 2.)*
+**Diagram (Mermaid):** *(blue = deterministic code; LLM acts only at the leaf)*
+```mermaid
+flowchart TD
+    R["Root plan<br/>deterministic orchestration"] --> L["Leaf llm_query<br/>bounded single field · schema-constrained"]
+    L --> V{"Validate<br/>redrob_ranker.profile.load"}
+    V -- accept --> OK["Field committed"]
+    V -- "precise field error" --> RP["Repair<br/>1· re-call failing block<br/>2· per-section decompose<br/>3· sentinel / default"]
+    RP --> V
+    OK --> DONE["Guaranteed schema-valid profile"]
+    classDef det fill:#e8f0fe,stroke:#4285f4,color:#111;
+    class R,V,RP det;
+```
+
+## Slide 8 — System Architecture  *(Mandatory Visual)*
+**Bullets / components:**
+- **UI:** Streamlit app (`app.py`) — BYO-key input, live telemetry panel (per-leaf prompt,
+  tokens, elapsed), HITL edit, parity tab. Deployed as a **Hugging Face Space** (CPU basic,
+  **torch-free**).
+- **Harness (`harness/`):** model-agnostic backends, per-field prompts, `coerce` (root plan:
+  repair + decompose), `validate`, `parity` eval, structured telemetry/logging.
+- **Schema + validator (`jd/`, `redrob_ranker/profile.py`):** retained from Repo 1 — the
+  authoritative JSON-Schema and standalone loader.
+- **Models:** Google AI Studio — Gemma 4 (`gemma-4-26b-a4b-it` default, `gemma-4-31b-it`;
+  `gemini-3-flash` selectable). **BYO key, session-only, never stored.**
+- **Redrob systems leveraged:** the RedRob **interpretable ranking engine** and its schema.
+- *(Phase 2):* modular embedded **DuckDB + LanceDB** data layer (swappable to enterprise
+  DBs); the rules-engine fit + gap-analysis module.
+
+**Diagram (Mermaid):**
+```mermaid
+flowchart TB
+    subgraph UI["UI · Streamlit on Hugging Face Space · CPU / torch-free"]
+        A1["BYO key input"]
+        A2["Live telemetry panel<br/>per-leaf prompt · tokens · latency"]
+        A3["HITL edit + parity tab"]
+    end
+    subgraph H["Harness · harness/"]
+        B2["RLM root · coerce<br/>repair + decompose"]
+        B1["Model-agnostic backends"]
+        B3["Validate"]
+        B4["Telemetry / logging"]
+    end
+    subgraph E["RedRob engine · retained from Repo 1"]
+        C1["jd_profile.schema.json"]
+        C2["profile.load validator"]
+        C3["Interpretable ranker"]
+    end
+    M["Models · Google AI Studio<br/>Gemma 4 · Gemini 3 Flash<br/>BYO key, session-only"]
+    subgraph P2["Phase 2 · planned"]
+        D1[("DuckDB<br/>profiles/resumes/fit_runs/corrections")]
+        D2[("LanceDB<br/>embeddings per model+dim")]
+        D3["Rules-engine fit + gap analysis"]
+    end
+    UI --> H
+    B1 --> M
+    B3 --> C2
+    C1 --- C2
+    H --> E
+    E -.-> P2
+```
+
+## Slide 9 — Data, Context & Intelligence Layer  *(Mandatory Visual)*
+**Bullets:**
+- **What data powers it:** the JD text itself (as an external RLM variable) + the engine's
+  schema + a **10-JD cross-domain gold set** (Amazon, Anthropic, Databricks, Google,
+  NVIDIA, Stripe) fetched **verbatim via structured sources** (Greenhouse API, Workday CXS,
+  Amazon JSON, JSON-LD) — never a summarizer, so eval integrity is preserved.
+- **How context is retrieved/stored/used:** the root **slices the JD into focused snippets**
+  per sub-field (retrieval by structure, not chunking). *(Phase 2:)* **LanceDB** stores
+  embeddings for semantic signal matching with a strict discipline — every vector carries
+  its `embedding_model` + `dim`, and JD queries are **re-embedded fresh per tier** so
+  EmbeddingGemma and Gemini vectors are never mixed; **DuckDB** holds profiles, resumes,
+  fit-runs, and HITL correction deltas.
+- **How Redrob context improves it:** validation and scoring are grounded in RedRob's own
+  schema and signals — the intelligence layer inherits the engine's definitions rather than
+  inventing its own.
+
+**Diagram (Mermaid):**
+```mermaid
+flowchart LR
+    JD["JD text<br/>external RLM variable"] --> S["Structural slicing<br/>→ focused leaf snippets"]
+    S --> LF["Leaf extractions"]
+    G["Gold JDs<br/>verbatim fetchers<br/>Greenhouse · Workday · JSON-LD"] --> PAR["Parity / regression eval"]
+    subgraph P2["Phase 2 stores"]
+        DB[("DuckDB<br/>profiles · resumes · fit_runs · corrections")]
+        LN[("LanceDB<br/>embeddings · per embedding_model+dim<br/>re-embed queries fresh per tier")]
+    end
+    LF --> DB
+    LF --> LN
+    DB --> RK["RedRob ranker"]
+    LN --> RK
+    RK --> GAP["Per-signal gap analysis"]
+```
 
 ---
 
-## End-to-End Workflow
+## Slide 10 — Scalability & Technical Feasibility
+- **How it's implemented:** already implemented and live (Module 1) — Python harness +
+  Streamlit on a free HF Space; offline test suite green.
+- **How it scales:** **small-model-first** — the RLM design uses many *bounded* leaf calls
+  instead of one huge context, keeping per-call cost/latency low; a **per-call 60 s timeout
+  + bounded repair** caps worst-case runtime; **torch-free / CPU-basic** footprint; a
+  configurable **detail-depth** knob trades richness for speed under free-tier rate caps.
+- **Technical challenges (and how handled):** free-tier rate limits → live telemetry +
+  timeout + explicit rate-cap surfacing; small models lack native JSON-schema mode → the
+  *harness* (not the model) guarantees structure; hallucination → authoritative validation
+  + graceful degradation.
 
-**What is the complete workflow from JD input to ranked candidate output?**
-1. **Paste JD** (free prose) into the Streamlit app; paste your own Google AI
-   Studio key (session-only).
-2. **RLM compile:** deterministic root slices the JD → focused leaf extractions
-   fill each schema sub-field.
-3. **Validate** against the engine's own loader (`redrob_ranker.profile.load`).
-4. **Bounded repair** on any failure (re-call failing block → per-section
-   decompose → sentinel degrade). **Guaranteed schema-valid output.**
-5. **Emit** `jd_profile.yaml` (drives the ranker) + `jd_meta.yaml` (coaching).
-6. **Human-in-the-loop edit** in the UI, then hand off to the **RedRob ranking
-   engine**, which scores/ranks candidates against the compiled profile.
-7. *(Phase 2)* Resume → candidate schema → rules-engine fit + per-signal gap
-   analysis returned to the candidate.
+## Slide 11 — Redrob Ecosystem Integration  *(Mandatory Visual)*
+- **Capabilities leveraged:** the RedRob interpretable ranking engine + its schema and
+  validator (reused directly, not re-implemented).
+- **New capability introduced:** a **JD→spec compiler** (makes ranking reproducible) and a
+  **candidate-facing fit + coaching** layer (Module 2) — turning a recruiter-side ranker
+  into a **two-sided** experience.
+- **How it strengthens the ecosystem:** better JD specs → better ranking → more trust →
+  candidates get actionable coaching → more engagement on both sides (a genuine two-sided
+  loop).
+- **Opportunities unlocked after implementation:** auto-profiling of every posted JD,
+  candidate self-service fit checks, gap-driven upskilling suggestions, and a local/offline
+  tier (Ollama + Gemma 4 E4B / EmbeddingGemma) for privacy-sensitive use.
 
----
+**Diagram (Mermaid — flywheel):**
+```mermaid
+flowchart LR
+    A["Better JD specs"] --> B["Better ranking"]
+    B --> C["Recruiter trust"]
+    C --> D["Candidate coaching"]
+    D --> E["Two-sided engagement"]
+    E --> F["More JDs + resumes"]
+    F --> G["Better data / signals"]
+    G --> A
+```
 
-## System Architecture
+## Slide 12 — Impact & Success Metrics
+- **Measurable outcomes (as tracked in-repo, qualitative):** across **10 hand-authored gold
+  JDs** spanning security, TPM, PM, pre-sales/SA, FDE, data-science and backend roles, the
+  harness produces **schema-valid output for every input** (multi-model parity eval across
+  Gemma 4 variants) — **it never emits an invalid file.**
+- **How success is tracked:** schema-validity rate, repair-pass count, per-leaf telemetry
+  (tokens/latency), and parity across models — all surfaced in the app.
+- **On quantitative comparison:** **no accuracy/performance number is claimed as proven
+  here — nothing in this repo has been formally benchmarked yet.** For this-approach vs
+  **direct LLM calls for ranking** (and vs other methods), ***actual comparison numbers are
+  provided in the Repo 1 README and on the HF demo app's homepage for reference.***
+- **Value created:** reproducible, auditable ranking specs; candidate-facing explainability.
+- **Estimated impact (projection — not yet benchmarked):** an **estimated ~`<<N>>`×** faster
+  and more reliable JD→spec creation vs a single manual / direct-LLM pass, with higher
+  downstream ranking precision from a validated spec. **These figures are estimates** —
+  see the footnote † for where to check the actual measured metric.
 
-- **UI:** Streamlit app (`app.py`) — BYO-key input, compile, HITL edit, parity
-  tab. Deployed as a **Hugging Face Space** (CPU basic, no torch).
-- **Harness (`harness/`):** model-agnostic backends, prompts, `coerce`
-  (repair + decompose), validate, parity eval.
-- **Schema + validator (`jd/`, `redrob_ranker/profile.py`):** retained from
-  Repo 1 — the authoritative JSON-Schema and the standalone validator loaded by
-  the harness.
-- **Models:** Google AI Studio — Gemma 4 (`gemma-4-26b-a4b-it` default,
-  `gemma-4-31b-it`; `gemini-3-flash` selectable). **BYO key, session-only.**
-- **Data:** `data/eval_jds/` — 10 validated cross-domain gold JDs
-  (profile + meta + verbatim source).
-- *(Phase 2 planned):* modular embedded DB (**DuckDB + LanceDB**) for
-  session/profile records, swappable to enterprise DBs; optional local Ollama
-  tier (Gemma 4 E4B + EmbeddingGemma) for a no-backend / client-side posture.
-
-*(Suggest pasting the architecture diagram / flow here on the slide.)*
-
----
-
-## Results & Performance
-
-**What results or insights demonstrate ranking quality?**
-- **Robustness result (qualitative, verified in-repo):** across **10 hand-authored
-  gold JDs** spanning security, TPM, PM, pre-sales/SA, FDE, data-science and
-  backend roles, the harness produces **schema-valid `jd_profile.yaml` for every
-  input** (multi-model parity eval across Gemma 4 variants). **It never emits an
-  invalid file.**
-- **No accuracy/performance number is claimed as proven here — nothing in this
-  repo has been formally benchmarked yet.**
-- For quantitative comparison of this approach vs **direct LLM calls for ranking**
-  (and vs other methods): ***actual comparison numbers are provided in the Repo 1
-  README and on the HF demo app's homepage for reference.***
-- Where an improvement is cited, treat it as **estimated/projected** — e.g.
-  *"estimated ~Nx improvement in [metric]"* is a **projection, not a measured
-  result** (fill `N`/metric only from a cited source; otherwise leave as a range).
-
-**How does your solution meet the challenge's runtime and compute constraints?**
-- **Lightweight footprint:** the Space builds from a **torch-free**
-  `requirements.txt` and runs on **CPU basic (free)** — no GPU required.
-- **Small-model-first:** the RLM design lets a **small hosted model (Gemma 4)**
-  do focused sub-extractions instead of one large call, keeping cost/latency low
-  and staying within Google AI Studio free-tier rate caps.
-- **BYO-key, session-only** compute — no server-side model hosting cost, no stored
-  keys or data.
-
----
-
-## Technologies Used
-
-**What technologies, frameworks, and tools were used and why?**
-- **Google AI Studio — Gemma 4** (`gemma-4-26b-a4b-it` / `gemma-4-31b-it`;
-  `gemini-3-flash` selectable): free within AI-Studio limits, strong small-model
-  extraction, **BYO-key** so no shared cost/secret exposure.
-- **Recursive Language Model (RLM) harness pattern** (arXiv 2512.24601): treat
-  the JD as an external variable; delegate focused sub-field extractions —
-  chosen for reliability and small-model efficiency over a single giant call.
-- **JSON-Schema validation** via the engine's own `redrob_ranker.profile.load`:
-  makes correctness authoritative and reuses Repo 1 instead of re-implementing.
-- **Streamlit + Hugging Face Spaces:** fast interactive UI, free CPU hosting,
-  trivial deploy (`sdk: streamlit`, `app_file: app.py`).
-- **Structured JD fetchers** (Greenhouse API, Workday CXS, Amazon JSON, JSON-LD):
-  verbatim JD capture for the gold eval set — never a summarizer.
-- **(Phase 2 planned):** DuckDB + LanceDB (embedded, swappable), Ollama +
-  Gemma 4 E4B / EmbeddingGemma for a local/offline tier.
+## Slide 13 — Future Roadmap
+- **Now → tomorrow (Phase 2):** resume → candidate schema → interpretable **rules-engine
+  fit + per-signal gap analysis** + HITL correction; modular **DuckDB + LanceDB** data
+  layer.
+- **2–3 years:** local/offline tier (Ollama + Gemma 4 E4B / EmbeddingGemma) for
+  zero-egress privacy; auto-compile of every Redrob JD; candidate self-service fit &
+  upskilling; enterprise DB swap (Postgres/pgvector, Snowflake) via the same modular seam.
+- **Broader vision:** a fully interpretable, two-sided hiring-intelligence layer on top of
+  Redrob — explainable to recruiters *and* candidates, model-agnostic, and cheap to run.
 
 ---
 
-## Submission Assets
-
-- **GitHub repo:** `<<GITHUB_REPO_URL>>`
-  *(git remote `origin` currently points to
-  `https://github.com/Ranjit1312/IndiaRuns_AI_resumeRanker` — confirm it is
-  pushed and public before submitting.)*
-- **Hugging Face Space (live demo):** `<<HF_SPACE_URL>>`
-  *(git remote `space` currently points to
-  `https://huggingface.co/spaces/Ranjit1312/Resume_Ranker` — confirm the Space
-  is built and public before submitting.)*
-- **Demo video:** `<<DEMO_VIDEO_URL>>`  *(TO FILL)*
-- **Reference for comparison numbers:** Repo 1 README + HF demo homepage
-  (`https://github.com/Ranjit1312/redrob_indiaRuns`).
+# Placeholders to fill before submitting
+- `<<TEAM_NAME>>`, `<<TEAM_MEMBERS>>`
+- `<<N>>` in the Slide-12 estimated-impact line — insert your estimate (kept labeled
+  **estimated**); the actual measured metric is referenced via footnote † to the HF Space.
+- **Mandatory visuals:** Mermaid source for all five (Workflow S6, AI decision-flow loop S7,
+  System architecture S8, Data-flow S9, Ecosystem flywheel S11) is embedded above — render at
+  [mermaid.live](https://mermaid.live) and paste the image into each slide (the ≤5-slide PDF
+  appendix can hold higher-res versions).
 
 ---
 
-# (a) Placeholders to fill before submitting
-- `<<TEAM_NAME>>`, `<<TEAM_LEADER_NAME>>`
-- `<<GITHUB_REPO_URL>>` — likely `https://github.com/Ranjit1312/IndiaRuns_AI_resumeRanker`
-  (git remote `origin`), **but confirm it is actually pushed + public.**
-- `<<HF_SPACE_URL>>` — likely `https://huggingface.co/spaces/Ranjit1312/Resume_Ranker`
-  (git remote `space`), **but confirm the Space is built + public.**
-- `<<DEMO_VIDEO_URL>>` — no video link found in the repo.
-- **Any performance / accuracy / "~Nx improvement" number** — do NOT hardcode.
-  Pull only from the **Repo 1 README** or the **HF demo homepage**, and label as
-  **estimated/projected** unless the source states it as measured.
+† **Actual measured metrics.** Quantitative results for this approach vs **direct LLM calls
+for ranking** (and vs other methods) are published on the **HF Space homepage**
+(`https://huggingface.co/spaces/Ranjit1312/Resume_Ranker`) and in the **Repo 1 README**
+(`https://github.com/Ranjit1312/redrob_indiaRuns`). Any figure marked *estimated* in this
+deck is a projection pending formal benchmarking — check the HF Space for the real number.
 
-# (b) Unverified / could not confirm
-- **Deck read succeeded** via the public txt-export endpoint (deck is at least
-  link-readable). Headings above are verbatim from that export; only the
-  **"System Architecture"** slide had **no question prompt text** in the export
-  (title only) — confirm whether that slide expects a diagram vs. written answer.
-- **Repo URL / HF Space URL are inferred from git remotes**, not confirmed as
-  pushed/live/public. DEPLOY.md still uses `<USER>/<REPO>` placeholders, so it's
-  unclear whether the push has been executed. **Verify both links open publicly.**
-- **No benchmarked metrics exist in this repo.** All comparison figures must come
-  from Repo 1 README / HF homepage; none are asserted here.
-- **Module 2 (resume→fit, rules engine, gap analysis, DuckDB/LanceDB)** is Phase 2
-  / in progress — described as planned, not shipped, in the points above.
+# Notes
+- Links above are the ones you confirmed; verify both open **publicly** before submitting.
+- **No benchmarked metrics exist in this repo** — all comparison figures are referenced to
+  Repo 1 README / HF homepage, never asserted here.
+- Module 2 (resume→fit, rules engine, gap analysis, DuckDB/LanceDB) is described as
+  **in progress / planned**, not shipped.

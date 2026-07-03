@@ -1,0 +1,10 @@
+# Optional file-backed persistence for store/ (STORE_BACKEND=duckdb+lance).
+# NOT part of the core requirements.txt — the default MemoryStore backend needs
+# neither of these, and the HF Space should stay light. Install this file only
+# for local/enterprise persistence.
+duckdb>=1.0
+lancedb>=0.15
+
+# Optional PDF export for tools/gen_resumes.py (Phase 2, Part C3). Lazy-imported;
+# if absent, PDF export is skipped gracefully (txt + docx are always written).
+fpdf2>=2.7
