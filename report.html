@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Resume-Fit — Architecture Review</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Inter', 'Segoe UI', sans-serif; }
+  .mermaid svg { max-width: 100%; }
+  .badge-ok   { @apply bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold; }
+  .badge-warn { @apply bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold; }
+  .badge-bad  { @apply bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold; }
+  details summary { cursor: pointer; }
+  details[open] summary .chevron { transform: rotate(90deg); }
+  .chevron { display: inline-block; transition: transform .2s; }
+  pre { white-space: pre-wrap; word-break: break-word; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });</script>
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header class="bg-indigo-700 text-white px-8 py-6 shadow-lg">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-2xl font-bold tracking-tight">Resume-Fit — Architecture Review</h1>
+    <p class="text-indigo-200 text-sm mt-1">
+      Generated 2026-07-03 · <code class="bg-indigo-600 px-1 rounded">harness/</code> module · improve-codebase-architecture skill
+    </p>
+  </div>
+</header>
+<main class="max-w-5xl mx-auto px-6 py-10 space-y-14">
+  <!-- ═══════════════════ CURRENT ARCHITECTURE ═══════════════════ -->
+  <section>
+    <h2 class="text-xl font-bold text-indigo-700 border-b border-indigo-100 pb-2 mb-4">Current Architecture</h2>
+    <p class="text-sm text-gray-600 mb-4">
+      The harness implements a <strong>Depth-1 Recursive Language Model (RLM)</strong> pattern:
+      deterministic code acts as the root, dispatching focused leaf LLM calls per field, then
+      validating and repairing the assembled profile. <code>resume.py</code> mirrors <code>coerce.py</code>
+      for the résumé path, sharing the same <code>llm_query</code> / <code>Environment</code> / <code>HarnessLogger</code> spine.
+    </p>
+    <div class="mermaid bg-white rounded-xl shadow p-4">
+graph TD
+    APP["app.py<br/>(Streamlit UI)"]
+    CJ["harness/coerce.py<br/>compile_jd()"]
+    CR["harness/resume.py<br/>compile_resume()"]
+    RLM["harness/rlm.py<br/>llm_query() + Environment"]
+    BE["harness/backends.py<br/>GoogleGenAIBackend"]
+    VAL["harness/validate.py<br/>validate_profile_dict()"]
+    LOG["harness/logging_utils.py<br/>HarnessLogger"]
+    SF["harness/schema_fields.py<br/>sentinels + coercers"]
+    CF["harness/candidate_fields.py<br/>resume sentinels"]
+    PROM["harness/prompts.py"]
+    RPROM["harness/resume_prompts.py"]
+    STORE["store/ (MemoryStore)"]
+    RANKER["redrob_ranker/profile.load<br/>redrob_ranker/fit.score"]
+    APP --> CJ
+    APP --> CR
+    APP --> STORE
+    APP --> RANKER
+    CJ --> RLM
+    CR --> RLM
+    RLM --> BE
+    RLM --> LOG
+    CJ --> SF
+    CJ --> VAL
+    CJ --> PROM
+    CR --> CF
+    CR --> RPROM
+    VAL --> RANKER
+    </div>
+    <p class="text-xs text-gray-500 mt-2">Both compile paths share the same transport spine (rlm.py / backends.py / logging_utils.py). Validation is delegated to the engine's own loader.</p>
+  </section>
+  <!-- ═══════════════════ FRICTION INVENTORY ═══════════════════ -->
+  <section>
+    <h2 class="text-xl font-bold text-indigo-700 border-b border-indigo-100 pb-2 mb-6">Friction Inventory — 6 Deepening Opportunities</h2>
+    <!-- ─── #1 ─── -->
+    <details open class="bg-white rounded-xl shadow mb-5">
+      <summary class="flex items-center gap-3 px-6 py-4 font-semibold text-gray-800 hover:bg-gray-50 rounded-xl">
+        <span class="text-indigo-600 text-lg font-bold">#1</span>
+        <span class="chevron text-gray-400 mr-1">▶</span>
+        <span>Parallel <code>_BUILDERS</code> + <code>_SENTINELS</code> dicts in <code>coerce.py</code></span>
+        <span class="ml-auto bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold">HIGH</span>
+      </summary>
+      <div class="px-6 pb-6 pt-2 space-y-4 text-sm text-gray-700">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="font-semibold text-red-700 mb-1">Today — Shallow</p>
+            <p>Two separate module-level dicts, keyed by identical string literals. Adding a new builder requires editing three places: the function, <code>_BUILDERS</code>, and <code>_SENTINELS</code>. They can silently diverge (a builder with no sentinel, or vice-versa). The repair loop then contains a fragile <code>if top in _BUILDERS … if top in _SENTINELS</code> cascade.</p>
+            <div class="mermaid mt-3">
+graph LR
+    B["_BUILDERS dict<br/>{role, locations, signals…}"]
+    S["_SENTINELS dict<br/>{role, locations, signals…}"]
+    R["repair loop<br/>if top in _BUILDERS<br/>if top in _SENTINELS"]
+    B --> R
+    S --> R
+            </div>
+          </div>
+          <div>
+            <p class="font-semibold text-green-700 mb-1">After — Deeper</p>
+            <p>A single <code>@dataclass BlockSpec</code> per field: <code>name, builder_fn, sentinel_fn</code>. One <code>BLOCK_REGISTRY: list[BlockSpec]</code> replaces both dicts. The repair loop becomes a simple <code>spec.builder(…); spec.sentinel(…)</code>. Adding a new field is one dataclass instantiation. Divergence is impossible.</p>
+            <div class="mermaid mt-3">
+graph LR
+    BR["BLOCK_REGISTRY<br/>list[BlockSpec]"]
+    BS["BlockSpec<br/>name, builder, sentinel"]
+    R2["repair loop<br/>spec = find(top)<br/>spec.builder(…)<br/>spec.sentinel(…)"]
+    BR --> BS
+    BS --> R2
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 rounded p-3 font-mono text-xs">
+<pre># NEW interface (harness/coerce.py)
+@dataclass
+class BlockSpec:
+    name: str
+    builder: Callable[..., Any]
+    sentinel: Callable[[dict], Any]
+BLOCK_REGISTRY: list[BlockSpec] = [
+    BlockSpec("role",                 build_role,           _sentinel_role),
+    BlockSpec("locations",            build_locations,      lambda _: dict(F.DEFAULT_LOCATIONS)),
+    BlockSpec("signals",              build_signals,        _sentinel_signals),
+    BlockSpec("domain",               build_domain,         lambda _: dict(F.DEFAULT_DOMAIN)),
+    BlockSpec("relevant_skill_regex", build_relevant_skill, lambda _: F.DEFAULT_RELEVANT_SKILL_REGEX),
+    BlockSpec("red_flags",            build_red_flags,      lambda _: F.sanitize_red_flags(None)),
+]
+_SPEC_MAP = {s.name: s for s in BLOCK_REGISTRY}   # O(1) lookup, same as before</pre>
+        </div>
+        <p><strong>Locality gain:</strong> every future field is one dataclass line; the repair loop never needs editing again.</p>
+      </div>
+    </details>
+    <!-- ─── #2 ─── -->
+    <details class="bg-white rounded-xl shadow mb-5">
+      <summary class="flex items-center gap-3 px-6 py-4 font-semibold text-gray-800 hover:bg-gray-50 rounded-xl">
+        <span class="text-indigo-600 text-lg font-bold">#2</span>
+        <span class="chevron text-gray-400 mr-1">▶</span>
+        <span><code>validate_profile_dict</code> round-trips through a temp file on every call</span>
+        <span class="ml-auto bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold">HIGH</span>
+      </summary>
+      <div class="px-6 pb-6 pt-2 space-y-4 text-sm text-gray-700">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="font-semibold text-red-700 mb-1">Today — Shallow</p>
+            <p><code>validate_profile_dict</code> in <code>harness/validate.py</code> serialises the dict to YAML, writes it to <code>tempfile.NamedTemporaryFile</code>, then calls <code>rprofile.load(tmp.name)</code> which reads the file back. This is called <em>up to 6 times per compile run</em> (initial + up to 2 repairs × 2 sentinels each). On read-only filesystems (HF Spaces containers) this silently fails. It is also the main reason adding a new field breaks if <code>jd/method_config.yaml</code> path is wrong — the error is a file-not-found that bubbles as a sentinel, not a clear message.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-green-700 mb-1">After — Deeper</p>
+            <p>Expose a <code>rprofile.load_dict(d, method_path)</code> seam in <code>redrob_ranker/profile.py</code> that accepts a Python dict directly. If the engine cannot be modified, add a <code>_validate_in_process(prof)</code> helper in <code>harness/validate.py</code> that calls <code>yaml.safe_dump</code> into a <code>io.StringIO</code> then <code>yaml.safe_load</code> back — removing the filesystem roundtrip entirely. Filesystem is only needed for the full engine path.</p>
+            <div class="bg-gray-50 rounded p-3 font-mono text-xs mt-2">
+<pre># harness/validate.py (after)
+import io
+def validate_profile_dict(prof, method_path=METHOD_PATH):
+    buf = io.StringIO()
+    yaml.safe_dump(prof, buf, sort_keys=False, allow_unicode=True)
+    buf.seek(0)
+    # rprofile.load_dict() — new seam in the engine, or:
+    import tempfile, os
+    # fallback: still write tmp, but to the OS temp dir, not cwd
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml",
+            dir=tempfile.gettempdir(), delete=False, encoding="utf-8") as f:
+        f.write(buf.getvalue())
+        fname = f.name
+    try:
+        rprofile.load(fname, method_path)
+        return ValidationResult(ok=True)
+    …</pre>
+            </div>
+          </div>
+        </div>
+        <p><strong>Locality gain:</strong> validation logic is in one place; HF Spaces read-only FS stops being a latent failure mode.</p>
+      </div>
+    </details>
+    <!-- ─── #3 ─── -->
+    <details class="bg-white rounded-xl shadow mb-5">
+      <summary class="flex items-center gap-3 px-6 py-4 font-semibold text-gray-800 hover:bg-gray-50 rounded-xl">
+        <span class="text-indigo-600 text-lg font-bold">#3</span>
+        <span class="chevron text-gray-400 mr-1">▶</span>
+        <span><code>health</code> is an untyped mutable dict threaded through 6+ functions</span>
+        <span class="ml-auto bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">MEDIUM</span>
+      </summary>
+      <div class="px-6 pb-6 pt-2 space-y-4 text-sm text-gray-700">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="font-semibold text-red-700 mb-1">Today — Shallow</p>
+            <p>The <code>health</code> dict is initialised in <code>compile_jd()</code> as <code>{"defaulted": [], "sentineled": [], "repairs": 0, …}</code> and passed by reference into every <code>build_*</code> function which mutates it. There is no type annotation on what keys are expected — nothing prevents a typo (<code>health["deafulted"]</code>) from silently creating a new key instead of appending to the correct list.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-green-700 mb-1">After — Deeper</p>
+            <p>Replace with a <code>@dataclass CompileHealth</code> (or a <code>TypedDict</code> for zero-migration cost). Builders receive it and call <code>health.defaulted.append("role")</code> — a typo now raises <code>AttributeError</code> immediately in tests. The dataclass also exports <code>.as_dict()</code> for the JSON health tab.</p>
+            <div class="bg-gray-50 rounded p-3 font-mono text-xs mt-2">
+<pre>@dataclass
+class CompileHealth:
+    defaulted:  list[str] = field(default_factory=list)
+    sentineled: list[str] = field(default_factory=list)
+    repairs:    int = 0
+    model:      str = ""
+    metadata:   dict = field(default_factory=dict)
+    telemetry:  dict | None = None
+    def as_dict(self) -> dict:
+        return dataclasses.asdict(self)</pre>
+            </div>
+          </div>
+        </div>
+        <p><strong>Locality gain:</strong> every builder's interface is narrower (typed health param); tests can instantiate <code>CompileHealth()</code> directly without constructing a magic dict.</p>
+      </div>
+    </details>
+    <!-- ─── #4 ─── -->
+    <details class="bg-white rounded-xl shadow mb-5">
+      <summary class="flex items-center gap-3 px-6 py-4 font-semibold text-gray-800 hover:bg-gray-50 rounded-xl">
+        <span class="text-indigo-600 text-lg font-bold">#4</span>
+        <span class="chevron text-gray-400 mr-1">▶</span>
+        <span><code>coerce.py</code> and <code>resume.py</code> duplicate the repair-loop pattern verbatim</span>
+        <span class="ml-auto bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">MEDIUM</span>
+      </summary>
+      <div class="px-6 pb-6 pt-2 space-y-4 text-sm text-gray-700">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="font-semibold text-red-700 mb-1">Today — Shallow</p>
+            <p>Both files implement the same <em>validate → if failing top-block → re-call builder → apply sentinel → loop</em> pattern independently. Any bug in the repair logic (e.g., the current bare <code>except Exception: pass</code> on line 221 of coerce.py) must be fixed in two places. The docstrings even say "mirrors coerce.py's discipline."</p>
+          </div>
+          <div>
+            <p class="font-semibold text-green-700 mb-1">After — Deeper</p>
+            <p>Extract a <code>repair_loop(profile, registry, env, backend, health, validator, …)</code> function into <code>harness/rlm.py</code> (the engine spine). Both <code>compile_jd</code> and <code>compile_resume</code> call it with their own registries and validators. The loop is written once, tested once, fixed once.</p>
+            <div class="mermaid mt-3">
+graph TD
+    CJ2["compile_jd"] --> RL["rlm.repair_loop(registry, validator)"]
+    CR2["compile_resume"] --> RL
+    RL --> B2["spec.builder()"]
+    RL --> S2["spec.sentinel()"]
+            </div>
+          </div>
+        </div>
+        <p><strong>Locality gain:</strong> repair-loop tests cover both JD and résumé paths; the bare <code>except: pass</code> is fixed in one place.</p>
+      </div>
+    </details>
+    <!-- ─── #5 ─── -->
+    <details class="bg-white rounded-xl shadow mb-5">
+      <summary class="flex items-center gap-3 px-6 py-4 font-semibold text-gray-800 hover:bg-gray-50 rounded-xl">
+        <span class="text-indigo-600 text-lg font-bold">#5</span>
+        <span class="chevron text-gray-400 mr-1">▶</span>
+        <span><code>Environment</code> lives in <code>rlm.py</code> but is a pure data/parsing class</span>
+        <span class="ml-auto bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">MEDIUM</span>
+      </summary>
+      <div class="px-6 pb-6 pt-2 space-y-4 text-sm text-gray-700">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="font-semibold text-red-700 mb-1">Today — Shallow</p>
+            <p><code>rlm.py</code> mixes two very different concerns: (a) JD section parsing / snippet slicing (<code>Environment</code>) and (b) the LLM network transport + retry (<code>llm_query</code>). Both <code>coerce.py</code> and <code>resume.py</code> import from <code>rlm</code>, coupling the JD parsing logic to the transport layer. Tests that only want to exercise snippet slicing must import the transport layer too.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-green-700 mb-1">After — Deeper</p>
+            <p>Move <code>Environment</code> (and <code>_SECTION_KEYS</code>, <code>_HEADER_RE</code>, <code>MAX_SNIPPET</code>) to a new <code>harness/document.py</code>. <code>rlm.py</code> becomes a pure transport module (<code>llm_query</code> only). The import graph becomes a DAG with no mixed concerns. <code>test_document.py</code> can verify section detection without importing any backend.</p>
+            <div class="mermaid mt-3">
+graph LR
+    DOC["harness/document.py<br/>Environment, _split, slice"]
+    RLM2["harness/rlm.py<br/>llm_query only"]
+    CJ3["coerce.py"] --> DOC
+    CJ3 --> RLM2
+    CR3["resume.py"] --> DOC
+    CR3 --> RLM2
+            </div>
+          </div>
+        </div>
+        <p><strong>Locality gain:</strong> section-detection bugs are isolated to <code>document.py</code>; transport bugs to <code>rlm.py</code>. Both are testable independently with zero mocking.</p>
+      </div>
+    </details>
+    <!-- ─── #6 ─── -->
+    <details class="bg-white rounded-xl shadow mb-5">
+      <summary class="flex items-center gap-3 px-6 py-4 font-semibold text-gray-800 hover:bg-gray-50 rounded-xl">
+        <span class="text-indigo-600 text-lg font-bold">#6</span>
+        <span class="chevron text-gray-400 mr-1">▶</span>
+        <span><code>app.py</code> is 1,300 lines — UI, business logic, and eval orchestration in one file</span>
+        <span class="ml-auto bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">MEDIUM</span>
+      </summary>
+      <div class="px-6 pb-6 pt-2 space-y-4 text-sm text-gray-700">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="font-semibold text-red-700 mb-1">Today — Shallow</p>
+            <p><code>app.py</code> has grown to 1,317 lines containing: JD compilation UI, résumé scoring UI, HITL form, eval study runner, store bootstrap, and utility helpers — all in one flat script. The Streamlit rerun model means every helper is re-executed on every interaction. Testing any single flow requires simulating the full Streamlit session state.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-green-700 mb-1">After — Deeper</p>
+            <p>Split into page modules: <code>pages/jd_compiler.py</code>, <code>pages/resume_scorer.py</code>, <code>pages/eval_study.py</code>. Keep <code>app.py</code> as a thin entrypoint (sidebar, session bootstrap, page routing). Business logic (store queries, compile calls) moves to <code>ui_helpers.py</code>. Each page module is independently testable with a <code>MockStore</code>.</p>
+            <div class="mermaid mt-3">
+graph TD
+    ENTRY["app.py<br/>(sidebar + routing)"]
+    P1["pages/jd_compiler.py"]
+    P2["pages/resume_scorer.py"]
+    P3["pages/eval_study.py"]
+    UH["ui_helpers.py<br/>(store queries, formatters)"]
+    ENTRY --> P1
+    ENTRY --> P2
+    ENTRY --> P3
+    P1 --> UH
+    P2 --> UH
+    P3 --> UH
+            </div>
+          </div>
+        </div>
+        <p><strong>Locality gain:</strong> the eval study feature can be iterated without touching the JD compiler. Streamlit multi-page routing keeps navigation free with zero extra code.</p>
+      </div>
+    </details>
+  </section>
+  <!-- ═══════════════════ PRIORITY MATRIX ═══════════════════ -->
+  <section>
+    <h2 class="text-xl font-bold text-indigo-700 border-b border-indigo-100 pb-2 mb-4">Priority &amp; Effort Matrix</h2>
+    <table class="w-full text-sm bg-white rounded-xl shadow overflow-hidden">
+      <thead class="bg-indigo-50 text-indigo-800">
+        <tr>
+          <th class="px-4 py-3 text-left">#</th>
+          <th class="px-4 py-3 text-left">Opportunity</th>
+          <th class="px-4 py-3 text-left">Impact</th>
+          <th class="px-4 py-3 text-left">Effort</th>
+          <th class="px-4 py-3 text-left">Recommendation</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-bold text-indigo-600">#1</td>
+          <td class="px-4 py-3"><code>BlockSpec</code> registry replaces parallel dicts</td>
+          <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold">High</span></td>
+          <td class="px-4 py-3 text-gray-500">~30 min</td>
+          <td class="px-4 py-3 text-green-700 font-semibold">✅ Do now</td>
+        </tr>
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-bold text-indigo-600">#2</td>
+          <td class="px-4 py-3">Validation without filesystem roundtrip</td>
+          <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold">High</span></td>
+          <td class="px-4 py-3 text-gray-500">~20 min</td>
+          <td class="px-4 py-3 text-green-700 font-semibold">✅ Do now</td>
+        </tr>
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-bold text-indigo-600">#3</td>
+          <td class="px-4 py-3"><code>CompileHealth</code> typed dataclass</td>
+          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">Medium</span></td>
+          <td class="px-4 py-3 text-gray-500">~45 min</td>
+          <td class="px-4 py-3 text-blue-700 font-semibold">↗ Next sprint</td>
+        </tr>
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-bold text-indigo-600">#4</td>
+          <td class="px-4 py-3">Shared <code>repair_loop()</code> in <code>rlm.py</code></td>
+          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">Medium</span></td>
+          <td class="px-4 py-3 text-gray-500">~1 hr</td>
+          <td class="px-4 py-3 text-blue-700 font-semibold">↗ Next sprint</td>
+        </tr>
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-bold text-indigo-600">#5</td>
+          <td class="px-4 py-3">Move <code>Environment</code> to <code>document.py</code></td>
+          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">Medium</span></td>
+          <td class="px-4 py-3 text-gray-500">~30 min</td>
+          <td class="px-4 py-3 text-blue-700 font-semibold">↗ Next sprint</td>
+        </tr>
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-bold text-indigo-600">#6</td>
+          <td class="px-4 py-3">Split <code>app.py</code> into page modules</td>
+          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold">Medium</span></td>
+          <td class="px-4 py-3 text-gray-500">~2 hr</td>
+          <td class="px-4 py-3 text-gray-500 font-semibold">⏸ Defer (stable first)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+  <!-- ═══════════════════ TARGET ARCHITECTURE ═══════════════════ -->
+  <section>
+    <h2 class="text-xl font-bold text-indigo-700 border-b border-indigo-100 pb-2 mb-4">Target Architecture (after #1–#5)</h2>
+    <div class="mermaid bg-white rounded-xl shadow p-4">
+graph TD
+    subgraph "harness/ — after deepening"
+      DOC2["document.py<br/>Environment, slice"]
+      RLM3["rlm.py<br/>llm_query + repair_loop"]
+      CJ4["coerce.py<br/>compile_jd + BlockSpec registry"]
+      CR4["resume.py<br/>compile_resume + BlockSpec registry"]
+      VAL2["validate.py<br/>in-process validation"]
+      LOG2["logging_utils.py<br/>HarnessLogger + LeafEntry"]
+      SF2["schema_fields.py<br/>CompileHealth + coercers"]
+    end
+    CJ4 --> DOC2
+    CJ4 --> RLM3
+    CR4 --> DOC2
+    CR4 --> RLM3
+    RLM3 --> LOG2
+    RLM3 --> VAL2
+    CJ4 --> SF2
+    CR4 --> SF2
+    </div>
+    <p class="text-xs text-gray-500 mt-2">Key change: <code>rlm.py</code> owns both transport (<code>llm_query</code>) and the repair orchestration (<code>repair_loop</code>). <code>document.py</code> is a pure parsing module with no I/O. <code>coerce.py</code> and <code>resume.py</code> are thin orchestrators that declare their <code>BlockSpec</code> registries and call shared infrastructure.</p>
+  </section>
+  <!-- ═══════════════════ WHAT'S ALREADY GOOD ═══════════════════ -->
+  <section>
+    <h2 class="text-xl font-bold text-indigo-700 border-b border-indigo-100 pb-2 mb-4">What's Already Good</h2>
+    <ul class="space-y-2 text-sm text-gray-700">
+      <li class="flex gap-2">✅ <span><strong>Backend Protocol + MockBackend</strong> — the transport seam is clean. Tests run fully offline without any mocking framework.</span></li>
+      <li class="flex gap-2">✅ <span><strong>HarnessLogger + on_event</strong> — post-hoc observability is now first-class. Every leaf call is recorded with full prompt/response/timing.</span></li>
+      <li class="flex gap-2">✅ <span><strong>Exponential backoff in <code>_call_with_backoff</code></strong> — <code>RateLimitError</code> vs <code>TransientBackendError</code> distinction is correct and well-tested.</span></li>
+      <li class="flex gap-2">✅ <span><strong>Sentinel degradation</strong> — the harness never emits an invalid file. Every builder has a deterministic fallback.</span></li>
+      <li class="flex gap-2">✅ <span><strong><code>test_harness.py</code> coverage</strong> — rate limit, bad regex, and useless model scenarios are all covered offline.</span></li>
+      <li class="flex gap-2">✅ <span><strong><code>max_signal_detail</code> cap</strong> — the N+1 API call problem in <code>build_signals</code> is bounded; labels beyond the cap are handled without extra calls.</span></li>
+    </ul>
+  </section>
+  <!-- ═══════════════════ FOOTER ═══════════════════ -->
+  <footer class="text-center text-xs text-gray-400 border-t border-gray-200 pt-6">
+    Generated by Antigravity · improve-codebase-architecture skill ·
+    <a href="file:///c:/Users/jadha/Downloads/%5BPUB%5D%20India_runs_data_and_ai_challenge/AI%20System/harness/coerce.py" class="underline">coerce.py</a> ·
+    <a href="file:///c:/Users/jadha/Downloads/%5BPUB%5D%20India_runs_data_and_ai_challenge/AI%20System/harness/rlm.py" class="underline">rlm.py</a> ·
+    <a href="file:///c:/Users/jadha/Downloads/%5BPUB%5D%20India_runs_data_and_ai_challenge/AI%20System/harness/validate.py" class="underline">validate.py</a>
+  </footer>
+</main>
+</body>
+</html>

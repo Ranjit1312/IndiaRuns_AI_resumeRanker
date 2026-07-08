@@ -17,8 +17,8 @@ import yaml
 from . import prompts as P
 from . import schema_fields as F
 from .backends import Backend, DEFAULT_MODEL
-from .rlm import Environment, llm_query
-from .validate import METHOD_PATH, ValidationResult, validate_profile_dict
+from .rlm import ArtifactSpec, CompileOutcome, Environment, llm_query, run_compile
+from .validate import EngineProfileValidator, METHOD_PATH, ValidationResult, validate_profile_dict
 
 MAX_SIGNALS = 7
 
@@ -183,56 +183,76 @@ _SENTINELS = {
 }
 
 
+class JDSpec:
+    """ArtifactSpec adapter for jd_profile.yaml (Candidate A).
+
+    Owns everything `compile_jd` used to inline: the ordered builder set, the
+    assemble step (cross_encoder_query + dense_extras), the role-repair
+    special case (refreshing cross_encoder_query), and the sentinel map.
+    `compile_jd` is now a thin wrapper over `run_compile(env, JDSpec(...), ...)`.
+    """
+
+    order = ["role", "locations", "signals", "domain", "relevant_skill_regex", "red_flags"]
+
+    def __init__(self, method_path: str = METHOD_PATH, max_signal_detail: int = MAX_SIGNALS,
+                source: dict | None = None):
+        self.validator = EngineProfileValidator(method_path)
+        self.max_signal_detail = max_signal_detail
+        self.source = source or {}
+
+    def build(self, name, env, backend, health, *, logger=None, on_event=None):
+        tel = dict(logger=logger, on_event=on_event)
+        if name == "signals":
+            return build_signals(env, backend, health,
+                                 max_signal_detail=self.max_signal_detail, **tel)
+        return _BUILDERS[name](env, backend, health, **tel)
+
+    def assemble(self, parts: dict, env: Environment) -> dict:
+        role, signals = parts["role"], parts["signals"]
+        return {
+            "schema_version": 1,
+            "role": role,
+            "locations": parts["locations"],
+            "signals": signals,
+            "dense_extras": dict(F.DEFAULT_DENSE_EXTRAS),
+            "cross_encoder_query": build_cross_encoder(role, signals),
+            "domain": parts["domain"],
+            "relevant_skill_regex": parts["relevant_skill_regex"],
+            "red_flags": parts["red_flags"],
+        }
+
+    def rebuild(self, artifact, failing_top, env, backend, hint, health,
+               *, logger=None, on_event=None):
+        tel = dict(logger=logger, on_event=on_event)
+        extra = {"max_signal_detail": self.max_signal_detail} if failing_top == "signals" else {}
+        artifact[failing_top] = _BUILDERS[failing_top](
+            env, backend, health, hint=hint, leaf_prefix="repair.", **tel, **extra)
+        if failing_top == "role":   # ce query mentions role fields
+            artifact["cross_encoder_query"] = build_cross_encoder(
+                artifact["role"], artifact["signals"])
+        return artifact
+
+    def sentinel(self, artifact, failing_top):
+        artifact[failing_top] = _SENTINELS[failing_top](artifact)
+        return artifact
+
+    def finalize(self, artifact, env, backend, *, logger=None, on_event=None):
+        return build_meta(env, backend, artifact, self.source, logger=logger, on_event=on_event)
+
+
 def compile_jd(jd_text: str, backend: Backend, *, method_path: str = METHOD_PATH,
                max_repairs: int = 2, source: dict | None = None,
                logger=None, on_event=None,
                max_signal_detail: int = MAX_SIGNALS) -> CompileResult:
     env = Environment(jd_text)
-    health = {"defaulted": [], "sentineled": [], "repairs": 0,
-              "metadata": env.metadata(), "model": getattr(backend, "name", "?")}
-    tel = dict(logger=logger, on_event=on_event)   # threaded into every leaf call
+    spec = JDSpec(method_path=method_path, max_signal_detail=max_signal_detail, source=source)
 
-    role = build_role(env, backend, health, **tel)
-    signals = build_signals(env, backend, health, max_signal_detail=max_signal_detail, **tel)
-    profile = {
-        "schema_version": 1,
-        "role": role,
-        "locations": build_locations(env, backend, health, **tel),
-        "signals": signals,
-        "dense_extras": dict(F.DEFAULT_DENSE_EXTRAS),
-        "cross_encoder_query": build_cross_encoder(role, signals),
-        "domain": build_domain(env, backend, health, **tel),
-        "relevant_skill_regex": build_relevant_skill(env, backend, health, **tel),
-        "red_flags": build_red_flags(env, backend, health, **tel),
-    }
+    outcome: CompileOutcome = run_compile(
+        env, spec, backend, logger=logger, on_event=on_event, max_repairs=max_repairs)
 
-    # validate → repair only the failing block (re-call once, then sentinel)
-    result = validate_profile_dict(profile, method_path)
-    while not result.ok and health["repairs"] < max_repairs:
-        health["repairs"] += 1
-        top = result.top
-        if top in _BUILDERS:
-            try:
-                extra = {"max_signal_detail": max_signal_detail} if top == "signals" else {}
-                profile[top] = _BUILDERS[top](env, backend, health, hint=result.error or "",
-                                              leaf_prefix="repair.", **tel, **extra)
-                if top == "role":  # ce query mentions role fields
-                    profile["cross_encoder_query"] = build_cross_encoder(profile["role"], profile["signals"])
-            except Exception:  # noqa: BLE001
-                pass
-            result = validate_profile_dict(profile, method_path)
-        if not result.ok and top in _SENTINELS:
-            profile[top] = _SENTINELS[top](profile)
-            health["sentineled"].append(top)
-            result = validate_profile_dict(profile, method_path)
-        elif top not in _SENTINELS and top not in _BUILDERS:
-            break   # unlocatable field — stop rather than loop
-
-    meta = build_meta(env, backend, profile, source or {}, **tel)
-    if logger is not None:
-        health["telemetry"] = logger.summary()
+    profile, meta = outcome.artifact, outcome.extra
     return CompileResult(
-        profile=profile, meta=meta, health=health, validation=result,
+        profile=profile, meta=meta, health=outcome.health, validation=outcome.validation,
         profile_yaml=to_yaml(profile), meta_yaml=to_yaml(meta))
 
 

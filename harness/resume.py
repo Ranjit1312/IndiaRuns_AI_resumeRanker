@@ -24,8 +24,8 @@ import yaml
 from . import candidate_fields as CF
 from . import resume_prompts as RP
 from .backends import Backend, DEFAULT_MODEL
-from .candidate_fields import ValidationResult, validate_candidate
-from .rlm import Environment, llm_query
+from .candidate_fields import JsonSchemaValidator, ValidationResult, validate_candidate
+from .rlm import ArtifactSpec, CompileOutcome, Environment, llm_query, run_compile
 
 
 @dataclass
@@ -130,90 +130,114 @@ def _sentinel_for(top: "str | None", cand: dict, ref_date: "str | None") -> "obj
 # --------------------------------------------------------------------------- #
 # root plan
 # --------------------------------------------------------------------------- #
+class ResumeSpec:
+    """ArtifactSpec adapter for the candidate dict (Candidate A).
+
+    Owns everything `compile_resume` used to inline: the ordered builder set,
+    the assemble step (projects->summary fold, the faithfulness rule —
+    projects text never enters career_history), and the sentinel map. Also
+    runs the final forced-sentinel pass in `finalize`, mirroring the original
+    "never emit an invalid candidate" last resort.
+    """
+
+    order = ["candidate_id", "profile", "career_history", "education", "skills",
+             "redrob_signals"]
+
+    def __init__(self, ref_date: "str | None" = None, schema_path: str = CF.SCHEMA_PATH):
+        self.validator = JsonSchemaValidator(schema_path)
+        self.ref_date = ref_date
+        self._projects_text = ""   # captured during build(), folded in assemble()
+
+    def build(self, name, env, backend, health, *, logger=None, on_event=None):
+        tel = dict(logger=logger, on_event=on_event)
+        if name == "candidate_id":
+            return CF.new_candidate_id()
+        if name == "profile":
+            profile = build_profile(env, backend, health, **tel)
+            self._projects_text = build_projects_summary(env, backend, health, **tel)
+            return profile
+        if name == "career_history":
+            return build_career_history(env, backend, health, ref_date=self.ref_date, **tel)
+        if name == "education":
+            return build_education(env, backend, health, **tel)
+        if name == "skills":
+            return build_skills(env, backend, health, **tel)
+        if name == "redrob_signals":
+            return build_redrob_signals(env, backend, health, ref_date=self.ref_date)
+        raise KeyError(name)   # pragma: no cover - exhaustive `order` above
+
+    def assemble(self, parts: dict, env: Environment) -> dict:
+        profile = CF.append_to_summary(parts["profile"], self._projects_text)
+        return {
+            "candidate_id": parts["candidate_id"],
+            "profile": profile,
+            "career_history": parts["career_history"],
+            "education": parts["education"],
+            "skills": parts["skills"],
+            "redrob_signals": parts["redrob_signals"],
+        }
+
+    def rebuild(self, artifact, failing_top, env, backend, hint, health,
+               *, logger=None, on_event=None):
+        tel = dict(logger=logger, on_event=on_event)
+        if failing_top == "profile":
+            artifact["profile"] = build_profile(
+                env, backend, health, hint=hint, leaf_prefix="repair.", **tel)
+        elif failing_top == "career_history":
+            artifact["career_history"] = build_career_history(
+                env, backend, health, hint=hint, leaf_prefix="repair.",
+                ref_date=self.ref_date, **tel)
+        elif failing_top == "education":
+            artifact["education"] = build_education(
+                env, backend, health, hint=hint, leaf_prefix="repair.", **tel)
+        elif failing_top == "skills":
+            artifact["skills"] = build_skills(
+                env, backend, health, hint=hint, leaf_prefix="repair.", **tel)
+        elif failing_top == "redrob_signals":
+            artifact["redrob_signals"] = build_redrob_signals(
+                env, backend, health, ref_date=self.ref_date)
+        elif failing_top == "candidate_id":
+            artifact["candidate_id"] = CF.new_candidate_id()
+        return artifact
+
+    def sentinel(self, artifact, failing_top):
+        s = _sentinel_for(failing_top, artifact, self.ref_date)
+        if s is not None:
+            artifact[failing_top] = s
+        return artifact
+
+    def finalize(self, artifact, env, backend, *, logger=None, on_event=None):
+        """Last-resort guarantee: if still invalid after the repair budget,
+        force every block through its sentinel coercion once (never emit an
+        invalid candidate)."""
+        if self.validator.validate(artifact).ok:
+            return None
+        artifact["candidate_id"] = artifact.get("candidate_id") or CF.new_candidate_id()
+        artifact["profile"] = CF.coerce_profile(artifact.get("profile") or {})
+        artifact["career_history"] = CF.coerce_career_history(
+            artifact.get("career_history") or [], ref_date=self.ref_date)
+        artifact["education"] = CF.coerce_education(artifact.get("education") or [])
+        artifact["skills"] = CF.coerce_skills(artifact.get("skills") or [])
+        artifact["redrob_signals"] = CF.coerce_redrob_signals(
+            artifact.get("redrob_signals"), "", ref_date=self.ref_date)
+        return "__final_pass__"
+
+
 def compile_resume(resume_text: str, backend: Backend, *,
                    logger=None, on_event=None, ref_date: "str | None" = None,
                    max_repairs: int = 2) -> ResumeResult:
     env = Environment(resume_text)
-    health = {"defaulted": [], "sentineled": [], "repairs": 0,
-              "metadata": env.metadata(), "model": getattr(backend, "name", "?")}
-    tel = dict(logger=logger, on_event=on_event)   # threaded into every leaf call
+    spec = ResumeSpec(ref_date=ref_date)
 
-    profile = build_profile(env, backend, health, **tel)
-    career_history = build_career_history(env, backend, health, ref_date=ref_date, **tel)
-    education = build_education(env, backend, health, **tel)
-    skills = build_skills(env, backend, health, **tel)
-    projects_text = build_projects_summary(env, backend, health, **tel)
-    profile = CF.append_to_summary(profile, projects_text)
-    redrob_signals = build_redrob_signals(env, backend, health, ref_date=ref_date)
+    outcome: CompileOutcome = run_compile(
+        env, spec, backend, logger=logger, on_event=on_event, max_repairs=max_repairs)
 
-    candidate = {
-        "candidate_id": CF.new_candidate_id(),
-        "profile": profile,
-        "career_history": career_history,
-        "education": education,
-        "skills": skills,
-        "redrob_signals": redrob_signals,
-    }
-
-    # validate -> repair only the failing block (one bounded re-call, then a
-    # guaranteed-valid sentinel — mirrors compile_jd's loop exactly).
-    result = validate_candidate(candidate)
-    while not result.ok and health["repairs"] < max_repairs:
-        health["repairs"] += 1
-        top = result.top
-        try:
-            if top == "profile":
-                candidate["profile"] = build_profile(
-                    env, backend, health, hint=result.error or "",
-                    leaf_prefix="repair.", **tel)
-            elif top == "career_history":
-                candidate["career_history"] = build_career_history(
-                    env, backend, health, hint=result.error or "",
-                    leaf_prefix="repair.", ref_date=ref_date, **tel)
-            elif top == "education":
-                candidate["education"] = build_education(
-                    env, backend, health, hint=result.error or "",
-                    leaf_prefix="repair.", **tel)
-            elif top == "skills":
-                candidate["skills"] = build_skills(
-                    env, backend, health, hint=result.error or "",
-                    leaf_prefix="repair.", **tel)
-            elif top == "redrob_signals":
-                candidate["redrob_signals"] = build_redrob_signals(
-                    env, backend, health, ref_date=ref_date)
-            elif top == "candidate_id":
-                candidate["candidate_id"] = CF.new_candidate_id()
-        except Exception:  # noqa: BLE001 — a leaf hiccup must not sink compile
-            pass
-        result = validate_candidate(candidate)
-
-        if not result.ok:
-            sentinel = _sentinel_for(top, candidate, ref_date)
-            if sentinel is not None:
-                candidate[top] = sentinel
-                health["sentineled"].append(top)
-                result = validate_candidate(candidate)
-            elif top not in {"profile", "career_history", "education", "skills",
-                             "redrob_signals", "candidate_id"}:
-                break   # unlocatable field — stop rather than loop
-
-    # last-resort guarantee: if still invalid after the repair budget, force
-    # every block through its sentinel coercion once (never emit an invalid
-    # candidate — mirrors compile_jd's contract).
-    if not result.ok:
-        candidate["candidate_id"] = candidate.get("candidate_id") or CF.new_candidate_id()
-        candidate["profile"] = CF.coerce_profile(candidate.get("profile") or {})
-        candidate["career_history"] = CF.coerce_career_history(
-            candidate.get("career_history") or [], ref_date=ref_date)
-        candidate["education"] = CF.coerce_education(candidate.get("education") or [])
-        candidate["skills"] = CF.coerce_skills(candidate.get("skills") or [])
-        candidate["redrob_signals"] = CF.coerce_redrob_signals(
-            candidate.get("redrob_signals"), "", ref_date=ref_date)
+    candidate = outcome.artifact
+    health = outcome.health
+    result = outcome.validation
+    if outcome.extra == "__final_pass__":
         health["sentineled"].append("__final_pass__")
-        result = validate_candidate(candidate)
-
-    if logger is not None:
-        health["telemetry"] = logger.summary()
+        result = spec.validator.validate(candidate)
 
     return ResumeResult(
         candidate=candidate, health=health, validation=result,

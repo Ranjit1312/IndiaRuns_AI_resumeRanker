@@ -372,6 +372,40 @@ def _load_schema() -> dict:
         return json.load(f)
 
 
+class JsonSchemaValidator:
+    """Adapter: validates a dict against a JSON-Schema file (Draft-7).
+
+    Mirrors `harness/validate.py`'s `EngineProfileValidator`: same
+    `(dict) -> ValidationResult` seam, different mechanism (`jsonschema`
+    instead of the engine's own loader). Defaults to `candidate_schema.json`
+    but works for any Draft-7 schema file.
+    """
+
+    def __init__(self, schema_path: str = SCHEMA_PATH) -> None:
+        self.schema_path = schema_path
+
+    def validate(self, d: dict) -> ValidationResult:
+        try:
+            import jsonschema
+        except ImportError as exc:  # pragma: no cover - jsonschema is a core dep
+            return ValidationResult(ok=False, error=f"jsonschema not importable: {exc}")
+
+        try:
+            schema = _load_schema() if self.schema_path == SCHEMA_PATH else \
+                json.load(open(self.schema_path, "r", encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return ValidationResult(ok=False, error=f"could not load schema: {exc}")
+
+        validator = jsonschema.Draft7Validator(schema)
+        errors = sorted(validator.iter_errors(d), key=lambda e: list(e.path))
+        if not errors:
+            return ValidationResult(ok=True)
+        e = errors[0]
+        loc = ".".join(str(p) for p in e.path) or "<root>"
+        top = str(e.path[0]) if e.path else (loc if loc != "<root>" else None)
+        return ValidationResult(ok=False, error=e.message, field=loc, top=top)
+
+
 def validate_candidate(cand: dict, schema_path: str = SCHEMA_PATH) -> ValidationResult:
     """Validate a candidate dict against candidate_schema.json (Draft-7).
 
@@ -379,23 +413,7 @@ def validate_candidate(cand: dict, schema_path: str = SCHEMA_PATH) -> Validation
     dotted path of the first schema violation (jsonschema's own ordering) and
     its top-level block name, so a caller can repair/re-sentinel just that
     block without re-deriving the whole candidate.
+
+    Thin back-compat wrapper — delegates to `JsonSchemaValidator`.
     """
-    try:
-        import jsonschema
-    except ImportError as exc:  # pragma: no cover - jsonschema is a core dep
-        return ValidationResult(ok=False, error=f"jsonschema not importable: {exc}")
-
-    try:
-        schema = _load_schema() if schema_path == SCHEMA_PATH else \
-            json.load(open(schema_path, "r", encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return ValidationResult(ok=False, error=f"could not load schema: {exc}")
-
-    validator = jsonschema.Draft7Validator(schema)
-    errors = sorted(validator.iter_errors(cand), key=lambda e: list(e.path))
-    if not errors:
-        return ValidationResult(ok=True)
-    e = errors[0]
-    loc = ".".join(str(p) for p in e.path) or "<root>"
-    top = str(e.path[0]) if e.path else (loc if loc != "<root>" else None)
-    return ValidationResult(ok=False, error=e.message, field=loc, top=top)
+    return JsonSchemaValidator(schema_path).validate(cand)

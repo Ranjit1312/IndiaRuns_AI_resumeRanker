@@ -1,8 +1,18 @@
 """Model-agnostic backend layer (the RLM leaf caller).
 
-A Backend is just: `generate(prompt, system=None) -> str`. The harness is written
-against this protocol so the parity eval can swap models freely and tests can run
-offline with a deterministic MockBackend.
+The model provider is split into two capability seams (Candidate E in
+CONTEXT.md) so callers depend on only what they use, and one mock can't drift
+from the real backend on either seam:
+
+- `TextBackend` — `generate(...)` / `generate_multimodal(...)` / `last_usage`.
+  What the RLM leaves (rlm.py / coerce.py / resume.py) need.
+- `EmbeddingBackend` — `embed(texts, model=...) -> list[list[float]]`. What
+  the fit scorer's dense-similarity path needs.
+
+`GoogleGenAIBackend` and `MockBackend` both satisfy both Protocols, so tests
+run offline against the same shape the real backend exposes. `Backend` stays
+as an alias of `TextBackend` for back-compat with existing type hints
+elsewhere in the harness (rlm.py, coerce.py, resume.py).
 
 Phase 1 ships GoogleGenAIBackend (Gemma 4 / Gemini via Google AI Studio, BYO key).
 Gemma models have no native JSON-schema mode, so the harness — not the model —
@@ -10,6 +20,7 @@ guarantees structure (see rlm.py / coerce.py).
 """
 from __future__ import annotations
 
+import hashlib
 import random
 import time
 from typing import Callable, Protocol, runtime_checkable
@@ -71,12 +82,33 @@ def _is_transient(exc: "Exception", genai_errors) -> bool:
 
 
 @runtime_checkable
-class Backend(Protocol):
+class TextBackend(Protocol):
+    """The RLM leaf-calling seam: text generation (+ optional multimodal OCR)."""
+
     name: str
     supports_response_schema: bool
+    last_usage: dict | None
 
     def generate(self, prompt: str, system: str | None = None,
                  temperature: float = 0.2, max_tokens: int = 2048) -> str: ...
+
+    def generate_multimodal(self, prompt: str, images: list[bytes], *,
+                            system: str | None = None, mime_type: str = "image/png",
+                            temperature: float = 0.2, max_tokens: int = 4096) -> str: ...
+
+
+@runtime_checkable
+class EmbeddingBackend(Protocol):
+    """The fit scorer's dense-similarity seam: text -> vectors."""
+
+    def embed(self, texts: list[str], model: str = ...) -> list[list[float]]: ...
+
+
+# Back-compat alias: `Backend` was one fuzzy Protocol before the Candidate E
+# split. Every existing type hint (harness/rlm.py, coerce.py, resume.py) just
+# imports `Backend` and never subclasses it, so aliasing it to `TextBackend`
+# keeps those imports working unmodified.
+Backend = TextBackend
 
 
 class MockBackend:
@@ -86,9 +118,16 @@ class MockBackend:
     `multimodal_responder(prompt, images, system) -> str` to exercise it, or
     leave it unset — calling `generate_multimodal` without one raises, same as
     any backend that doesn't implement it.
+
+    Also implements `embed(texts, model=...)` (hash-seeded, L2-normalized,
+    deterministic, no network) so a single MockBackend instance satisfies both
+    `TextBackend` and `EmbeddingBackend` — callers needing embeddings (e.g.
+    redrob_ranker/fit.py's dense-similarity path) can type against
+    `EmbeddingBackend` instead of hand-rolling a separate mock.
     """
 
     supports_response_schema = False
+    _EMBED_DIM = 32
 
     def __init__(self, responder: Callable[[str, str | None], str], name: str = "mock",
                  multimodal_responder: Callable[[str, list, str | None], str] | None = None):
@@ -111,6 +150,28 @@ class MockBackend:
         if self._multimodal_responder is None:
             raise NotImplementedError("MockBackend: no multimodal_responder configured")
         return self._multimodal_responder(prompt, images, system)
+
+    def embed(self, texts: list[str], model: str = "mock-embed") -> list[list[float]]:
+        """Hash-seeded, L2-normalized, deterministic — no network, no numpy.
+
+        Same text always yields the same vector; different texts yield
+        (with overwhelming probability) different vectors, which is all the
+        fit-scorer dense-similarity path needs from a mock.
+        """
+        return [self._vec(t) for t in texts]
+
+    def _vec(self, text: str) -> list[float]:
+        vec = []
+        seed = text.encode("utf-8", errors="ignore")
+        for i in range(self._EMBED_DIM):
+            digest = hashlib.sha256(seed + i.to_bytes(4, "big")).digest()
+            # Map first 8 bytes of the digest to a float in [-1, 1].
+            n = int.from_bytes(digest[:8], "big")
+            vec.append((n / (2 ** 64 - 1)) * 2.0 - 1.0)
+        norm = sum(v * v for v in vec) ** 0.5
+        if not norm:
+            return vec
+        return [v / norm for v in vec]
 
 
 class GoogleGenAIBackend:

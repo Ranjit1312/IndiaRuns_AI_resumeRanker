@@ -30,13 +30,10 @@ from harness.candidate_fields import validate_candidate
 from harness.coerce import compile_jd
 from harness.ingest import OCR_MAX_PAGES, extract_text  # shared file→text seam (JD + résumé)
 from harness.logging_utils import HarnessLogger
-from harness.resume import compile_resume
 from harness.validate import validate_profile_dict
-from redrob_ranker import profile as rprofile
-from redrob_ranker.fit import score_candidate
+from fit_session import parse_resume, run_fit
 from store import get_store
-from store.schema import (CandidateRecordRow, CorrectionRow, FitRunRow,
-                          ProfileRow, ResumeRow)
+from store.schema import CorrectionRow
 from eval_study.compare import discover_dataset, run_study, write_report, REPORT_DIR
 
 load_dotenv()
@@ -45,7 +42,6 @@ st.set_page_config(page_title="Resume-Fit", page_icon="🧭", layout="wide")
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 GOLD_JD_DIR = os.path.join(_HERE, "data", "eval_jds")
-METHOD_PATH = os.path.join(_HERE, "jd", "method_config.yaml")
 EVAL_RUNS_DIR = os.path.join(REPORT_DIR, "runs")
 _METHOD_LABEL_SHORT = {
     "A_our_engine": "A) Our engine",
@@ -223,8 +219,11 @@ def _df_to_skills(df: "pd.DataFrame") -> list:
     return out
 
 
+@st.cache_data(show_spinner=False)
 def _list_gold_jds() -> list:
-    """[(slug, path_to_jd_profile.yaml), ...] for every gold JD with a profile."""
+    """[(slug, path_to_jd_profile.yaml), ...] for every gold JD with a profile.
+    Cached: the eval_jds dir is static at runtime, so it isn't re-scanned on
+    every Streamlit rerun."""
     out = []
     if not os.path.isdir(GOLD_JD_DIR):
         return out
@@ -233,6 +232,31 @@ def _list_gold_jds() -> list:
         if os.path.isfile(p):
             out.append((slug, p))
     return out
+
+
+@st.cache_data(show_spinner=False)
+def _cached_discover_dataset() -> list:
+    """Cache the synthetic-résumé dataset scan so the Dashboard tab doesn't
+    re-walk `data/synthetic_resumes/` on every rerun (cleared on app restart /
+    when you regenerate the set)."""
+    return discover_dataset()
+
+
+def _get_backend(api_key: str, model: str):
+    """Reuse one GoogleGenAIBackend per (key, model) *within the session* so the
+    google-genai client isn't rebuilt on every rerun / at every call site.
+
+    Cached in ``st.session_state`` — deliberately NOT ``st.cache_resource``,
+    which is process-global and would keep a BYO key-bearing client in shared
+    memory across sessions. Session state preserves the 'key held only for this
+    session' contract while still killing the per-rerun rebuild cost."""
+    cache = st.session_state.setdefault("_backend_cache", {})
+    ck = (api_key, model)
+    be = cache.get(ck)
+    if be is None:
+        be = GoogleGenAIBackend(api_key=api_key, model=model)
+        cache[ck] = be
+    return be
 
 
 def _render_scorecard(fr: dict) -> None:
@@ -284,24 +308,6 @@ def _render_scorecard(fr: dict) -> None:
         "Download scorecard (JSON)", json.dumps(fr, indent=2, ensure_ascii=False),
         file_name="fit_scorecard.json", mime="application/json",
         key=f"dl_scorecard_{fr.get('candidate_id', '')}_{id(fr)}")
-
-
-def _load_profile_method_from_yaml(profile_yaml_text: str):
-    """Load Profile+Method objects from an in-session jd_profile.yaml STRING, by
-    writing it to a temp file — mirrors harness/validate.py:validate_profile_dict's
-    temp-file + rprofile.load pattern (reused here rather than duplicated)."""
-    d = yaml.safe_load(profile_yaml_text)
-    import tempfile
-    tmp = tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8")
-    try:
-        yaml.safe_dump(d, tmp, sort_keys=False, allow_unicode=True)
-        tmp.close()
-        return rprofile.load(tmp.name, METHOD_PATH)
-    finally:
-        try:
-            os.unlink(tmp.name)
-        except OSError:
-            pass
 
 
 def _pick_jd_for_batch() -> "tuple[str, str] | None":
@@ -357,20 +363,15 @@ def _render_batch_fit_tab(files: list) -> None:
             st.error("Could not resolve the selected JD.")
             return
         jd_label, profile_yaml_text = picked
-        try:
-            jd_profile, jd_method = _load_profile_method_from_yaml(profile_yaml_text)
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"Could not load the JD profile: {exc}")
-            return
 
         try:
-            backend = GoogleGenAIBackend(api_key=key, model=model)
+            backend = _get_backend(key, model)
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not initialize the model backend: {exc}")
             return
 
         try:
-            ocr_fallback = GoogleGenAIBackend(api_key=key, model=GEMINI_MODELS[0])
+            ocr_fallback = _get_backend(key, GEMINI_MODELS[0])
         except Exception:  # noqa: BLE001
             ocr_fallback = None
 
@@ -389,45 +390,30 @@ def _render_batch_fit_tab(files: list) -> None:
                 if not text.strip():
                     raise ValueError("No extractable text (empty/unsupported file).")
 
-                blog = HarnessLogger()
-                rres = compile_resume(text, backend, logger=blog, max_repairs=max_repairs)
-                cand = rres.candidate
-
-                vr = validate_candidate(cand)
-                if not vr.ok:
-                    raise ValueError(f"Candidate failed validation: {vr.error}")
-
-                fit_result = score_candidate(cand, jd_profile, jd_method, backend,
-                                             ref_date=jd_method.ref_date)
-
+                parsed = parse_resume(text, backend, max_repairs=max_repairs)
+                cand = parsed.candidate
                 row["name"] = cand.get("profile", {}).get("anonymized_name") or f.name
-                row["fit_result"] = fit_result.to_dict()
 
-                # persist: resume + candidate_record + fit_run (sentinels
-                # auto-approved — no HITL correction rows in batch mode)
-                resume_id = _new_id("resume")
-                store.save_resume(ResumeRow(
-                    resume_id=resume_id, workspace_id=wsid, name=row["name"],
-                    raw_text=text, candidate_json=cand, created_at=_now_iso()))
-                record_id = _new_id("rec")
-                store.save_candidate_record(CandidateRecordRow(
-                    record_id=record_id, workspace_id=wsid, resume_id=resume_id,
-                    candidate_json=cand, created_at=_now_iso()))
-                profile_id = _new_id("profile")
-                store.save_profile(ProfileRow(
-                    profile_id=profile_id, workspace_id=wsid, name=jd_label,
-                    profile_yaml=profile_yaml_text, created_at=_now_iso()))
-                store.save_fit_run(FitRunRow(
-                    run_id=_new_id("run"), workspace_id=wsid, profile_id=profile_id,
-                    record_id=record_id, result_json=fit_result.to_dict(),
-                    overall=fit_result.overall, created_at=_now_iso()))
-            except RateLimitError as exc:
-                row["status"] = "error"
-                row["error"] = "Rate-limited (free-tier cap)"
-                st.warning(
-                    f"**{f.name}**: hit the Google AI Studio free-tier rate cap "
-                    "(HTTP 429 / RESOURCE_EXHAUSTED) — skipped, continuing with "
-                    "the rest of the batch.")
+                # sentinels auto-approved — no HITL correction rows in batch mode
+                outcome = run_fit(cand, profile_yaml_text, backend, store,
+                                  workspace_id=wsid, jd_label=jd_label,
+                                  resume_text=text, resume_name=row["name"])
+
+                if outcome.status == "ok":
+                    row["fit_result"] = outcome.fit.to_dict()
+                elif outcome.status == "rate_limited":
+                    row["status"] = "error"
+                    row["error"] = "Rate-limited (free-tier cap)"
+                    st.warning(
+                        f"**{f.name}**: hit the Google AI Studio free-tier rate cap "
+                        "(HTTP 429 / RESOURCE_EXHAUSTED) — skipped, continuing with "
+                        "the rest of the batch.")
+                elif outcome.status == "transient":
+                    row["status"] = "error"
+                    row["error"] = outcome.message or "Transient backend error"
+                else:   # "invalid"
+                    row["status"] = "error"
+                    row["error"] = outcome.message
             except Exception as exc:  # noqa: BLE001 — one bad file must not sink the batch
                 row["status"] = "error"
                 row["error"] = str(exc)
@@ -606,7 +592,7 @@ with tab_jd:
     # ------------------------------------------------------------------- #
     if go or st.session_state.pop("jd_retry_compile", False):
         try:
-            backend = GoogleGenAIBackend(api_key=key, model=model)
+            backend = _get_backend(key, model)
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not initialize the model backend: {exc}")
             st.stop()
@@ -783,8 +769,8 @@ with tab_fit:
                     len(plain.strip()) < 20 * 5
                 if looks_scanned and key:
                     try:
-                        ocr_backend = GoogleGenAIBackend(api_key=key, model=model)
-                        ocr_fallback = GoogleGenAIBackend(api_key=key, model=GEMINI_MODELS[0])
+                        ocr_backend = _get_backend(key, model)
+                        ocr_fallback = _get_backend(key, GEMINI_MODELS[0])
                     except Exception:  # noqa: BLE001
                         ocr_backend = ocr_fallback = None
                     if ocr_backend is not None:
@@ -814,12 +800,11 @@ with tab_fit:
 
         if parse_go:
             try:
-                backend = GoogleGenAIBackend(api_key=key, model=model)
+                backend = _get_backend(key, model)
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Could not initialize the model backend: {exc}")
                 st.stop()
 
-            rlog = HarnessLogger()
             revents: list[dict] = []
 
             with st.status(f"Parsing résumé with {model} (RLM leaf extractions)…",
@@ -833,7 +818,7 @@ with tab_fit:
                     _live_status_events(revents, rheader, rlines, total_hint="6")
 
                 try:
-                    rres = compile_resume(resume_text, backend, logger=rlog,
+                    parsed = parse_resume(resume_text, backend,
                                           on_event=_on_resume_event, max_repairs=max_repairs)
                 except RateLimitError as exc:
                     rstatus.update(label="Hit the free-tier rate cap", state="error")
@@ -849,13 +834,13 @@ with tab_fit:
                 rstatus.update(label="Résumé parse complete", state="complete")
 
             # parsed (pre-HITL) snapshot — kept immutable for the delta capture later
-            st.session_state["fit_parsed_candidate"] = copy.deepcopy(rres.candidate)
-            st.session_state["fit_candidate"] = copy.deepcopy(rres.candidate)
+            st.session_state["fit_parsed_candidate"] = copy.deepcopy(parsed.candidate)
+            st.session_state["fit_candidate"] = copy.deepcopy(parsed.candidate)
             st.session_state["fit_resume_text"] = resume_text
-            st.session_state["fit_health"] = rres.health
-            st.session_state["fit_ok"] = rres.validation.ok
-            st.session_state["fit_err"] = rres.validation.error
-            st.session_state["fit_telemetry"] = [e.as_dict() for e in rlog.entries]
+            st.session_state["fit_health"] = parsed.health
+            st.session_state["fit_ok"] = parsed.validation.ok
+            st.session_state["fit_err"] = parsed.validation.error
+            st.session_state["fit_telemetry"] = parsed.telemetry
             st.session_state["fit_approved"] = False
 
         # ----------------------------------------------------------------------- #
@@ -987,6 +972,9 @@ with tab_fit:
             st.session_state["fit_candidate"] = cand
 
             # -- approve --------------------------------------------------------------- #
+            # Validation here only gates "approved" (unlocks scoring) and drives the
+            # HITL correction-delta capture; run_fit() re-validates + persists the
+            # resume/candidate_record/fit_run as one unit at score time (step 3 below).
             approve = st.button("Approve corrections", type="primary", key="fit_approve")
             if approve:
                 vr = validate_candidate(cand)
@@ -994,42 +982,30 @@ with tab_fit:
                 st.session_state["fit_validation_err"] = vr.error
                 if vr.ok:
                     st.session_state["fit_approved"] = True
-                    store = _get_workspace()
-                    wsid = _workspace_id()
 
                     # delta: parsed (pre-HITL) vs approved candidate, persisted as
                     # individual correction rows.
-                    parsed = st.session_state.get("fit_parsed_candidate") or {}
-                    deltas = _diff_dict(parsed, cand)
-                    resume_id = _new_id("resume")
+                    parsed_cand = st.session_state.get("fit_parsed_candidate") or {}
+                    deltas = _diff_dict(parsed_cand, cand)
+                    store = _get_workspace()
+                    wsid = _workspace_id()
+                    corr_resume_id = _new_id("resume")
                     for field_path, before, after in deltas:
                         store.save_correction(CorrectionRow(
                             correction_id=_new_id("corr"), workspace_id=wsid,
-                            resume_id=resume_id, field_path=field_path,
+                            resume_id=corr_resume_id, field_path=field_path,
                             before=before, after=after,
                             note="parsed-vs-approved HITL delta", created_at=_now_iso()))
-
-                    store.save_resume(ResumeRow(
-                        resume_id=resume_id, workspace_id=wsid,
-                        name=cand.get("profile", {}).get("anonymized_name", "Candidate"),
-                        raw_text=st.session_state.get("fit_resume_text", ""),
-                        candidate_json=cand, created_at=_now_iso()))
-                    record_id = _new_id("rec")
-                    store.save_candidate_record(CandidateRecordRow(
-                        record_id=record_id, workspace_id=wsid, resume_id=resume_id,
-                        candidate_json=cand, created_at=_now_iso()))
-                    st.session_state["fit_resume_id"] = resume_id
-                    st.session_state["fit_record_id"] = record_id
                     st.session_state["fit_n_corrections"] = len(deltas)
                     st.success(f"Approved and validated · {len(deltas)} correction(s) "
-                              "captured vs. the parsed résumé · saved to workspace.")
+                              "captured vs. the parsed résumé.")
                 else:
                     st.error(f"Still invalid after your edits: {vr.error}")
 
             if st.session_state.get("fit_approved"):
                 n = st.session_state.get("fit_n_corrections", 0)
-                st.caption(f"Approved · {n} HITL correction(s) recorded in `store.corrections` "
-                          f"· resume_id `{st.session_state.get('fit_resume_id')}`.")
+                st.caption(f"Approved · {n} HITL correction(s) recorded in "
+                          "`store.corrections`.")
 
             # ----------------------------------------------------------------------- #
             # 3 — pick the JD to score against
@@ -1061,57 +1037,44 @@ with tab_fit:
                     st.caption("Approve corrections above before scoring.")
 
                 if score_go:
-                    try:
-                        if jd_choice == "This session's compiled JD":
-                            profile_yaml_text = st.session_state["session_jd_profile_yaml"]
-                            jd_label = "session-compiled JD"
-                        else:
-                            slug = jd_choice[len("Gold: "):]
-                            path = dict(gold)[slug]
-                            with open(path, "r", encoding="utf-8") as fh:
-                                profile_yaml_text = fh.read()
-                            jd_label = slug
-                        jd_profile, jd_method = _load_profile_method_from_yaml(profile_yaml_text)
-                    except Exception as exc:  # noqa: BLE001
-                        st.error(f"Could not load the JD profile: {exc}")
-                        st.stop()
+                    if jd_choice == "This session's compiled JD":
+                        profile_yaml_text = st.session_state["session_jd_profile_yaml"]
+                        jd_label = "session-compiled JD"
+                    else:
+                        slug = jd_choice[len("Gold: "):]
+                        path = dict(gold)[slug]
+                        with open(path, "r", encoding="utf-8") as fh:
+                            profile_yaml_text = fh.read()
+                        jd_label = slug
 
                     try:
-                        fit_backend = GoogleGenAIBackend(api_key=key, model=model)
+                        fit_backend = _get_backend(key, model)
                     except Exception as exc:  # noqa: BLE001
                         st.error(f"Could not initialize the model backend: {exc}")
                         st.stop()
 
-                    with st.spinner(f"Scoring against **{jd_label}** (live embeddings)…"):
-                        try:
-                            fit_result = score_candidate(
-                                st.session_state["fit_candidate"], jd_profile, jd_method,
-                                fit_backend, ref_date=jd_method.ref_date)
-                        except RateLimitError as exc:
-                            st.warning(
-                                "Hit the Google AI Studio **free-tier rate cap** while "
-                                "computing embeddings (HTTP 429 / RESOURCE_EXHAUSTED). "
-                                "Wait a minute and retry.")
-                            st.stop()
-                        except Exception as exc:  # noqa: BLE001
-                            st.error(f"Scoring failed: {exc}")
-                            st.stop()
-
-                    st.session_state["fit_result"] = fit_result.to_dict()
-                    st.session_state["fit_jd_label"] = jd_label
-
-                    # persist: the JD profile (if not already saved) + the fit_run
                     store = _get_workspace()
                     wsid = _workspace_id()
-                    profile_id = _new_id("profile")
-                    store.save_profile(ProfileRow(
-                        profile_id=profile_id, workspace_id=wsid, name=jd_label,
-                        profile_yaml=profile_yaml_text, created_at=_now_iso()))
-                    store.save_fit_run(FitRunRow(
-                        run_id=_new_id("run"), workspace_id=wsid, profile_id=profile_id,
-                        record_id=st.session_state.get("fit_record_id", ""),
-                        result_json=fit_result.to_dict(), overall=fit_result.overall,
-                        created_at=_now_iso()))
+                    with st.spinner(f"Scoring against **{jd_label}** (live embeddings)…"):
+                        outcome = run_fit(
+                            st.session_state["fit_candidate"], profile_yaml_text,
+                            fit_backend, store, workspace_id=wsid, jd_label=jd_label,
+                            resume_text=st.session_state.get("fit_resume_text", ""))
+
+                    if outcome.status == "ok":
+                        st.session_state["fit_result"] = outcome.fit.to_dict()
+                        st.session_state["fit_jd_label"] = jd_label
+                        st.session_state["fit_run_id"] = outcome.fit_run_id
+                    elif outcome.status == "rate_limited":
+                        st.warning(
+                            "Hit the Google AI Studio **free-tier rate cap** while "
+                            "computing embeddings (HTTP 429 / RESOURCE_EXHAUSTED). "
+                            "Wait a minute and retry.")
+                    elif outcome.status == "transient":
+                        st.warning(f"Transient backend error while scoring: "
+                                  f"{outcome.message}. Try again shortly.")
+                    else:   # "invalid"
+                        st.error(f"Could not score: {outcome.message}")
 
             # ----------------------------------------------------------------------- #
             # 4 — scorecard
@@ -1134,7 +1097,7 @@ with tab_dash:
         "labeled data — **not a live percentile**, a sanity check of ranking "
         "agreement with a known strong/borderline/weak ordering.")
 
-    dash_dataset_all = discover_dataset()
+    dash_dataset_all = _cached_discover_dataset()
     max_pairs = len(dash_dataset_all) or 1
     dcol1, dcol2 = st.columns(2)
     with dcol1:
@@ -1159,7 +1122,7 @@ with tab_dash:
             st.error("No (JD, résumé) pairs found under data/synthetic_resumes/.")
         else:
             try:
-                cmp_backend = GoogleGenAIBackend(api_key=key, model=model)
+                cmp_backend = _get_backend(key, model)
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Could not initialize the model backend: {exc}")
                 cmp_backend = None

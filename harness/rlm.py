@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Protocol, runtime_checkable
 
 from .backends import Backend
 from .jsonutil import extract_json
 from .logging_utils import LeafEntry
 from .prompts import SYSTEM
+from .validate import Validator, ValidationResult
 
 MAX_SNIPPET = 6000   # cap each leaf's view (RLM "bounded output" spirit)
 
@@ -135,3 +137,114 @@ def llm_query(backend: Backend, prompt: str, *, leaf: str = "", logger=None,
             elapsed_s=elapsed_s, ok=ok, error=error, tokens=usage)
         on_event(entry)
     return parsed
+
+
+# --------------------------------------------------------------------------- #
+# Compile loop (Candidate A) — the shared "never emit an invalid artifact"
+# invariant that both compile_jd and compile_resume implement identically:
+# build ordered leaves -> assemble -> validate -> repair-the-failing-block ->
+# sentinel-degrade -> re-validate -> optional finalize.
+# --------------------------------------------------------------------------- #
+@runtime_checkable
+class ArtifactSpec(Protocol):
+    """What `run_compile` needs to compile one artifact type.
+
+    Two adapters live today: `harness.coerce.JDSpec` (jd_profile.yaml, via
+    `EngineProfileValidator`) and `harness.resume.ResumeSpec` (candidate dict,
+    via `JsonSchemaValidator`).
+    """
+
+    #: leaf names, in build order (also the vocabulary `rebuild`/`sentinel`
+    #: are keyed on, i.e. the artifact's top-level blocks).
+    order: list[str]
+
+    #: the validator this spec's artifact must satisfy.
+    validator: Validator
+
+    def build(self, name: str, env: "Environment", backend: Backend, health: dict,
+             *, logger=None, on_event=None) -> Any:
+        """Build one leaf/top-level block, in isolation."""
+        ...
+
+    def assemble(self, parts: dict[str, Any], env: "Environment") -> dict:
+        """Combine the built parts into the artifact dict (derived fields,
+        folds, etc. live here — e.g. JD's cross_encoder_query, résumé's
+        projects->summary fold)."""
+        ...
+
+    def rebuild(self, artifact: dict, failing_top: "str | None", env: "Environment",
+               backend: Backend, hint: str, health: dict,
+               *, logger=None, on_event=None) -> dict:
+        """Re-derive just the failing top-level block (one bounded model
+        re-call). May also touch other derived fields as a special case
+        (e.g. JD refreshing cross_encoder_query when role repairs). Returns
+        the (possibly mutated) artifact dict."""
+        ...
+
+    def sentinel(self, artifact: dict, failing_top: "str | None") -> dict:
+        """Guaranteed-valid fallback coercion for the failing top-level
+        block. Returns the (possibly mutated) artifact dict."""
+        ...
+
+    def finalize(self, artifact: dict, env: "Environment", backend: Backend,
+                *, logger=None, on_event=None) -> Any:
+        """Optional post-validate step (e.g. JD's jd_meta sidecar). Specs
+        without one simply omit the method — `run_compile` checks with
+        `getattr`."""
+        ...
+
+
+@dataclass
+class CompileOutcome:
+    artifact: dict
+    extra: Any               # finalize()'s return value, or None
+    health: dict
+    validation: ValidationResult
+
+
+def run_compile(env: "Environment", spec: ArtifactSpec, backend: Backend, *,
+                logger=None, on_event=None, max_repairs: int = 2) -> CompileOutcome:
+    """The one deep module owning "never emit an invalid artifact":
+
+    build ordered leaves -> spec.assemble(parts, env) -> validate via
+    spec.validator -> while invalid and repairs<max: spec.rebuild(...) else
+    spec.sentinel(...) -> re-validate -> optional spec.finalize(...).
+
+    Threads logger/on_event/health exactly as compile_jd did before the
+    refactor; both compile_jd and compile_resume are now thin specs over
+    this loop.
+    """
+    health = {"defaulted": [], "sentineled": [], "repairs": 0,
+              "metadata": env.metadata(), "model": getattr(backend, "name", "?")}
+    tel = dict(logger=logger, on_event=on_event)
+
+    parts = {name: spec.build(name, env, backend, health, **tel) for name in spec.order}
+    artifact = spec.assemble(parts, env)
+
+    result = spec.validator.validate(artifact)
+    while not result.ok and health["repairs"] < max_repairs:
+        health["repairs"] += 1
+        top = result.top
+        if top in spec.order:
+            try:
+                artifact = spec.rebuild(artifact, top, env, backend, result.error or "",
+                                        health, **tel)
+            except Exception:  # noqa: BLE001 — a leaf hiccup must not sink compile
+                pass
+            result = spec.validator.validate(artifact)
+        if not result.ok and top in spec.order:
+            artifact = spec.sentinel(artifact, top)
+            health["sentineled"].append(top)
+            result = spec.validator.validate(artifact)
+        elif top not in spec.order:
+            break   # unlocatable field — stop rather than loop
+
+    extra = None
+    finalize = getattr(spec, "finalize", None)
+    if finalize is not None:
+        extra = finalize(artifact, env, backend, **tel)
+
+    if logger is not None:
+        health["telemetry"] = logger.summary()
+
+    return CompileOutcome(artifact=artifact, extra=extra, health=health, validation=result)

@@ -14,6 +14,7 @@ import os
 import re
 import tempfile
 from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 import yaml
 
@@ -35,6 +36,18 @@ class ValidationResult:
     top: str | None = None            # top-level block (e.g. "signals", "role")
 
 
+@runtime_checkable
+class Validator(Protocol):
+    """The seam `(dict) -> ValidationResult` (Candidate C).
+
+    An `ArtifactSpec` injects one of these; `run_compile` never knows which
+    mechanism actually runs (engine profile.load vs jsonschema Draft-7, ...).
+    """
+
+    def validate(self, d: dict) -> ValidationResult:
+        ...
+
+
 def field_of(error: str | None) -> tuple[str | None, str | None]:
     if not error:
         return None, None
@@ -49,20 +62,37 @@ def field_of(error: str | None) -> tuple[str | None, str | None]:
     return path, top
 
 
-def validate_profile_dict(prof: dict, method_path: str = METHOD_PATH) -> ValidationResult:
-    """Validate a jd_profile dict via the engine's profile.load. Pure/no mutation."""
-    tmp = tempfile.NamedTemporaryFile(
-        "w", suffix=".yaml", delete=False, encoding="utf-8")
-    try:
-        yaml.safe_dump(prof, tmp, sort_keys=False, allow_unicode=True)
-        tmp.close()
-        rprofile.load(tmp.name, method_path)   # raises ValueError on any problem
-        return ValidationResult(ok=True)
-    except ValueError as exc:
-        field, top = field_of(str(exc))
-        return ValidationResult(ok=False, error=str(exc), field=field, top=top)
-    finally:
+class EngineProfileValidator:
+    """Adapter: validates a jd_profile dict via the engine's own `profile.load`.
+
+    Writes the dict to a temp YAML file (the engine loader is file-based),
+    invokes `redrob_ranker.profile.load`, and translates the resulting
+    `ValueError`'s field path into a `ValidationResult`. Pure/no mutation.
+    """
+
+    def __init__(self, method_path: str = METHOD_PATH) -> None:
+        self.method_path = method_path
+
+    def validate(self, d: dict) -> ValidationResult:
+        tmp = tempfile.NamedTemporaryFile(
+            "w", suffix=".yaml", delete=False, encoding="utf-8")
         try:
-            os.unlink(tmp.name)
-        except OSError:
-            pass
+            yaml.safe_dump(d, tmp, sort_keys=False, allow_unicode=True)
+            tmp.close()
+            rprofile.load(tmp.name, self.method_path)   # raises ValueError on any problem
+            return ValidationResult(ok=True)
+        except ValueError as exc:
+            field, top = field_of(str(exc))
+            return ValidationResult(ok=False, error=str(exc), field=field, top=top)
+        finally:
+            try:
+                os.unlink(tmp.name)
+            except OSError:
+                pass
+
+
+def validate_profile_dict(prof: dict, method_path: str = METHOD_PATH) -> ValidationResult:
+    """Validate a jd_profile dict via the engine's profile.load. Pure/no mutation.
+
+    Thin back-compat wrapper — delegates to `EngineProfileValidator`."""
+    return EngineProfileValidator(method_path).validate(prof)

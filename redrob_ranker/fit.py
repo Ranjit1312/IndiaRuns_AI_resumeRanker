@@ -235,13 +235,35 @@ def _embed_matrix(backend, texts: list) -> "np.ndarray":
 
 
 # ---------------------------------------------------------------------------
-# core scorer
+# deterministic per-candidate core (Candidate D — the pinned/tested seam)
+#
+# Everything in here needs NO embeddings/backend/BM25/mm(): it is pure
+# candidate + profile + method arithmetic, faithfully ported line-for-line
+# from REPO1 features.py/rules.py per the module docstring above. Pulling it
+# out into its own function means it is directly unit-testable (and
+# golden-pinnable, see tests/test_fit_parity.py) without a mock embedder.
+# `score_candidate` below calls this internally for the non-dense-embedding
+# part of the scorecard, then layers the live-embedding dense/lexical channel
+# on top — its signature/return type/behavior are UNCHANGED by this refactor.
 # ---------------------------------------------------------------------------
-def score_candidate(candidate: dict, profile, method, backend, *,
-                     ref_date: "str | None" = None) -> FitResult:
-    """Score ONE candidate against ONE JD (profile/method). See module docstring."""
-    _require_embed(backend)
+def compute_components(candidate: dict, profile, method, *,
+                        ref_date: "str | None" = None) -> dict:
+    """Deterministic per-candidate features + gates (no embeddings needed).
 
+    Returns a dict with exactly these keys (each a faithful port of REPO1
+    per-candidate math; see fit.py's module docstring for the REPO1
+    features.py/rules.py line-ranges each one ports):
+
+        yoe_fit, hopper, only_consulting, months_since_ic_role, cv_primary,
+        domain_nlp_ratio, ai_skill_corroboration, ai_skills_claimed,
+        evid_coverage, depth_bonus, assess_strength, integrity,
+        availability_mult, notice_pen, loc2_v4
+
+    Also returns the intermediate bookkeeping `score_candidate` needs to
+    finish the scorecard (chunks/job_metas/msince/W/wsum/evid_by_id/
+    lex_by_id/dense_extras-derived weights/etc.) under an `_internal` key,
+    so no computation here is duplicated by the caller.
+    """
     REF = _parse_date(ref_date or method.ref_date)
     if REF is None:
         raise ValueError(f"fit: could not parse ref_date {ref_date or method.ref_date!r}")
@@ -268,27 +290,6 @@ def score_candidate(candidate: dict, profile, method, backend, *,
     rw = 0.5 ** (msince / facet_hl)
     W = rw * np.sqrt(dur)
     wsum = float(W.sum()) if n_jobs else 0.0
-
-    # -- embed: signal queries + job chunks + headline/summary (ONE batch) ---
-    sig_ids = profile.signal_ids()
-    n_sig = len(sig_ids)
-    queries = [s.query for s in profile.signals]
-    texts_to_embed = list(queries) + list(chunks) + [head_text]
-    all_vecs = _embed_matrix(backend, texts_to_embed)
-    jd_vecs = all_vecs[:n_sig]                                  # (NSIG, d)
-    job_matrix = all_vecs[n_sig:n_sig + n_jobs]                 # (n_jobs, d)
-    summ_vec = all_vecs[n_sig + n_jobs:n_sig + n_jobs + 1]      # (1, d)
-
-    if n_jobs:
-        simsJ = job_matrix @ jd_vecs.T                          # (n_jobs, NSIG)
-    else:
-        simsJ = np.zeros((0, n_sig))
-    simsS = (summ_vec @ jd_vecs.T)[0] if n_sig else np.zeros(0)  # (NSIG,)
-
-    if n_jobs and wsum > 0:
-        recencywt = (simsJ * W[:, None]).sum(axis=0) / wsum      # (NSIG,)
-    else:
-        recencywt = np.zeros(n_sig)
 
     # -- evidence regexes per job chunk (features.py L238-259) ---------------
     INTERNAL_RE = method.context_re["internal"]
@@ -496,18 +497,104 @@ def score_candidate(candidate: dict, profile, method, backend, *,
     if notice_pen is None:
         notice_pen = method.notice_tiers[-1]["mult"]
 
-    # -- lexical proxy per signal -------------------------------------------
+    # -- lexical proxy per signal (single-candidate; no embeddings needed) ----
     candidate_text_all = head_text + " " + jt_all + " " + " ".join(names)
     lex_by_id = {s.id: _lexical_proxy(s.query, candidate_text_all) for s in profile.signals}
-    lex_fit = float(np.mean(list(lex_by_id.values()))) if sig_ids else 0.0
+    lex_fit = float(np.mean(list(lex_by_id.values()))) if profile.signal_ids() else 0.0
+
+    de = profile.dense_extras
+    yoe_fit_w = float(de.get("yoe_fit_weight", 0.0))
+    domain_ratio_w = float(de.get("domain_ratio_weight", 0.0))
+
+    return {
+        # -- the 15 named, pinned deterministic values -----------------------
+        "yoe_fit": yoe_fit,
+        "hopper": hopper,
+        "only_consulting": only_consulting,
+        "months_since_ic_role": float(months_since_ic),
+        "cv_primary": cv_primary,
+        "domain_nlp_ratio": float(domain_nlp_ratio),
+        "ai_skill_corroboration": float(ai_corr),
+        "ai_skills_claimed": float(ai_claimed_n),
+        "evid_coverage": float(evid_coverage),
+        "depth_bonus": float(depth_bonus),
+        "assess_strength": float(assess_strength),
+        "integrity": float(integ),
+        "availability_mult": float(availability),
+        "notice_pen": float(notice_pen),
+        "loc2_v4": float(loc2),
+        # -- bookkeeping score_candidate needs for the embedding-dependent
+        #    dense/lexical channel + the human-readable gaps; not part of the
+        #    pinned contract, but avoids recomputing any of the above. -------
+        "_internal": {
+            "intr": intr, "cid": cid,
+            "chunks": chunks, "job_metas": job_metas, "head_text": head_text,
+            "n_jobs": n_jobs, "W": W, "wsum": wsum,
+            "evid_by_id": evid_by_id, "lex_by_id": lex_by_id, "lex_fit": lex_fit,
+            "yoe_fit_w": yoe_fit_w, "domain_ratio_w": domain_ratio_w,
+            "days": days, "dormant": dormant, "low_rr": low_rr,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# core scorer
+# ---------------------------------------------------------------------------
+def score_candidate(candidate: dict, profile, method, backend, *,
+                     ref_date: "str | None" = None) -> FitResult:
+    """Score ONE candidate against ONE JD (profile/method). See module docstring."""
+    _require_embed(backend)
+
+    comp = compute_components(candidate, profile, method, ref_date=ref_date)
+    ic = comp["_internal"]
+    chunks, job_metas, head_text = ic["chunks"], ic["job_metas"], ic["head_text"]
+    n_jobs, W, wsum = ic["n_jobs"], ic["W"], ic["wsum"]
+    evid_by_id, lex_by_id, lex_fit = ic["evid_by_id"], ic["lex_by_id"], ic["lex_fit"]
+    cid = ic["cid"]
+
+    depth_bonus = comp["depth_bonus"]
+    evid_coverage = comp["evid_coverage"]
+    cv_primary = comp["cv_primary"]
+    domain_nlp_ratio = comp["domain_nlp_ratio"]
+    ai_corr = comp["ai_skill_corroboration"]
+    ai_claimed_n = comp["ai_skills_claimed"]
+    assess_strength = comp["assess_strength"]
+    yoe_fit = comp["yoe_fit"]
+    hopper = comp["hopper"]
+    only_consulting = comp["only_consulting"]
+    months_since_ic = comp["months_since_ic_role"]
+    loc2 = comp["loc2_v4"]
+    integ = comp["integrity"]
+    availability = comp["availability_mult"]
+    notice_pen = comp["notice_pen"]
+    days, dormant, low_rr = ic["days"], ic["dormant"], ic["low_rr"]
+    yoe_fit_w, domain_ratio_w = ic["yoe_fit_w"], ic["domain_ratio_w"]
+
+    # -- embed: signal queries + job chunks + headline/summary (ONE batch) ---
+    sig_ids = profile.signal_ids()
+    n_sig = len(sig_ids)
+    queries = [s.query for s in profile.signals]
+    texts_to_embed = list(queries) + list(chunks) + [head_text]
+    all_vecs = _embed_matrix(backend, texts_to_embed)
+    jd_vecs = all_vecs[:n_sig]                                  # (NSIG, d)
+    job_matrix = all_vecs[n_sig:n_sig + n_jobs]                 # (n_jobs, d)
+    summ_vec = all_vecs[n_sig + n_jobs:n_sig + n_jobs + 1]      # (1, d)
+
+    if n_jobs:
+        simsJ = job_matrix @ jd_vecs.T                          # (n_jobs, NSIG)
+    else:
+        simsJ = np.zeros((0, n_sig))
+    simsS = (summ_vec @ jd_vecs.T)[0] if n_sig else np.zeros(0)  # (NSIG,)
+
+    if n_jobs and wsum > 0:
+        recencywt = (simsJ * W[:, None]).sum(axis=0) / wsum      # (NSIG,)
+    else:
+        recencywt = np.zeros(n_sig)
 
     # -- dense_fit (rules.py L119-129) --------------------------------------
     dense_fit = 0.0
     for i, s in enumerate(profile.signals):
         dense_fit += s.dense_weight * float(recencywt[i])
-    de = profile.dense_extras
-    yoe_fit_w = float(de.get("yoe_fit_weight", 0.0))
-    domain_ratio_w = float(de.get("domain_ratio_weight", 0.0))
     dense_fit += yoe_fit_w * yoe_fit + domain_ratio_w * domain_nlp_ratio
 
     # -- additive composite (rules.py L134-138) ------------------------------
